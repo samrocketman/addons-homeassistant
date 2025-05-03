@@ -1,7 +1,7 @@
 ARG BUILD_FROM
 FROM $BUILD_FROM
 
-FROM "embarkstudios/wireguard-ui:1.3.0" as wg-ui
+FROM "ngoduykhanh/wireguard-ui:0.6.2" as wg-ui
 FROM ${BUILD_FROM}
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
