@@ -4,19 +4,19 @@ checksums:
   wireguard-ui:
     arm64: 362e8554a745d2e3ee205c6ba86220b491b52c861cc05e1e2963f388547c75bc
     amd64: 439e49cc4eacb552bf3c992c884538aedce1bcc29b297a8a8f23cbca2beb7bdc
+    arm: 9d8bed77c5252f749a9ea3be8291a2c20093d102a8e1d3ab3c2caf5934cc395a
 utility:
   wireguard-ui:
     dest: "${DEST_DIR:-/.}"
-    only: '[ "${os}" = linux ] && case "${arch}" in amd64|arm64) true;; *) false;; esac'
+    only: '[ "${os}" = linux ] && case "${arch}" in amd64|arm64|arm) true;; *) false;; esac'
     perm: '755'
     os:
       Linux: linux
-      Darwin: darwin
     arch:
       aarch64: arm64
+      armv7: arm
+      armv7l: arm
       x86_64: amd64
-      Darwin:
-        i386: amd64
     download: https://github.com/ngoduykhanh/wireguard-ui/releases/download/v${version}/wireguard-ui-v${version}-${os}-${arch}.tar.gz
     extract: tar -xzC ${dest}/ --no-same-owner ${utility}
     update: |

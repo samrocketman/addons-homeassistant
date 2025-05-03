@@ -6,4 +6,6 @@
 
 bashio::log.info "Starting NGinx..."
 
+WGUI_BASEPATH="${HOSTNAME/-/_}/ingress"
+export WGUI_BASEPATH
 exec nginx

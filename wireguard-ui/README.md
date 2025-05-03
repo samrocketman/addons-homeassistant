@@ -22,6 +22,6 @@ recalculate checksums.  The checksums are necessary to ensure all users download
 the expected version of wireguard-ui utility.
 
     download-utilities.sh --update
-    download-utilities.sh --checksum --invert-os-arch -I Linux:aarch64 -I Linux:x86_64
+    download-utilities.sh --checksum --invert-os-arch -I Linux:aarch64 -I Linux:armv7 -I Linux:x86_64
 
 [yml-install-files]: https://github.com/samrocketman/yml-install-files
