@@ -1,4 +1,4 @@
 # https://developers.home-assistant.io/docs/add-ons/repository#repository-configuration
-name: Home Assistant add-on repository by TheSeal
-url: "https://github.com/theseal/addons-homeassistant"
-maintainer: Johan Wassberg <johan@rymdvarel.se>
+name: Wireguard UI add-on repository
+url: "https://github.com/samrocketman/addons-homeassistant"
+maintainer: Sam Gleske <875669+samrocketman@users.noreply.github.com>
