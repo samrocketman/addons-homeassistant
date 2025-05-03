@@ -47,7 +47,7 @@ WGUI_ENDPOINT_ADDRESS="${endpoint}:${port%/*}"
 WGUI_SERVER_LISTEN_PORT="${port%/*}"
 exec /wireguard-ui \
   -disable-login \
-  -base-path "${HOSTNAME/-/_}/ingress" \
   -bind-address "127.0.0.1:8080"
+#  -base-path "${HOSTNAME/-/_}/ingress" \
 #    --auth-user-header=X-Hass-User-ID                   \
 #    --nat-device=${default_nic}                         \
