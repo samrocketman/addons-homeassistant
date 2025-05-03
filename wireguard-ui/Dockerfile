@@ -20,6 +20,6 @@ apt-get install -y --no-install-recommends \
     && mkdir -p /var/log/nginx \
     && touch /var/log/nginx/error.log
 
-COPY --from=wg-ui /wireguard-ui /wireguard-ui
+COPY --from=wg-ui /app/wg-ui /wireguard-ui
 
 COPY rootfs /
