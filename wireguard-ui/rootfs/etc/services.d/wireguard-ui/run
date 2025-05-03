@@ -5,6 +5,9 @@
 # Runs the Wireguard UI
 # ==============================================================================
 
+# auto-export environment variables
+set -E
+
 declare default_nic
 declare dns
 declare endpoint
@@ -17,14 +20,33 @@ dns=$(bashio::config 'dns')
 endpoint=$(bashio::config 'endpoint')
 port=$(bashio::addon.port '51820/udp')
 
-# Run Grafana
-exec /wireguard-ui                                      \
-    --auth-user-header=X-Hass-User-ID                   \
-    --data-dir=/data                                    \
-    --listen-address="127.0.0.1:8080"                   \
-    --log-level=debug                                   \
-    --nat-device=${default_nic}                         \
-    --wg-device-name=wg0                                \
-    --wg-dns=${dns}                                     \
-    --wg-endpoint=${endpoint}:${port}                   \
-    --wg-listen-port=${port}
+# daemon restarts wg interface on modification
+while true; do
+  if [ ! -f /tmp/wg_initialized ]; then
+    if [ -f /etc/wireguard/wg0.conf ]; then
+      wg-quick down wg0 || true
+      wg-quick up wg0
+      touch /tmp/wg_initialized
+    fi
+  elif [ -f /etc/wireguard/wg0.conf ] && inotifywait -e modify /etc/wireguard/wg0.conf; then
+    wg-quick down wg0
+    wg-quick up wg0
+  fi
+  sleep 1;
+done &
+
+# Run wireguard-ui
+# wireguard-ui creates databases in `./db`
+# /data is a persistent path in the container
+cd /data
+
+# customizations from home assistant
+WGUI_DNS="${dns:-1.1.1.1}"
+WGUI_LOG_LEVEL=debug
+WGUI_ENDPOINT_ADDRESS="${endpoint}:${port%/*}"
+WGUI_SERVER_LISTEN_PORT="${port%/*}"
+exec /wireguard-ui \
+  -disable-login \
+  -bind-address "127.0.0.1:8080"
+#    --auth-user-header=X-Hass-User-ID                   \
+#    --nat-device=${default_nic}                         \

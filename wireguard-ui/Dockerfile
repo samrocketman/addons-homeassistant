@@ -11,13 +11,16 @@ RUN \
   download-utilities.sh
 FROM ${BUILD_FROM}
 
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+SHELL ["/bin/bash", "-exo", "pipefail", "-c"]
 
 RUN \
-apt-get update \
-&& \
-apt-get install -y --no-install-recommends \
+  apt-get update; \
+  apt-get install -y --no-install-recommends \
         nginx \
+        ca-certificates \
+        wireguard-tools \
+        iptables \
+        inotify-tools \
 	    && rm -fr \
         /tmp/* \
         /var/{cache,log}/* \
