@@ -41,6 +41,7 @@ done &
 cd /data
 
 # customizations from home assistant
+BASE_PATH="${HOSTNAME/-/_}/ingress"
 WGUI_DNS="${dns:-1.1.1.1}"
 WGUI_LOG_LEVEL=debug
 WGUI_ENDPOINT_ADDRESS="${endpoint}:${port%/*}"
