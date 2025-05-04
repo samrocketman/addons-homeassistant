@@ -19,16 +19,23 @@ endpoint=$(bashio::config 'endpoint')
 port=$(bashio::addon.port '51820/udp')
 
 # daemon restarts wg interface on modification
+iface_addr() { awk '$1 == "[Interface]" {iface=1; next}; iface == 1 && $1 == "Address" {print $3; exit}' /etc/wireguard/wg0.conf | tr ',' '\n'; }
+clear_nats() { iptables-save | grep -F -- '-j MASQUERADE' | sed 's/^-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables -t nat {}'; }
+nat_ip_ranges() { iface_addr | xargs -I {} iptables -t nat -A POSTROUTING -s '{}' -o eth0 -j MASQUERADE; }
+refresh_wireguard() {
+  wg-quick down wg0 || true
+  wg-quick up wg0
+  clear_nats
+  nat_ip_ranges
+}
 while true; do
   if [ ! -f /tmp/wg_initialized ]; then
     if [ -f /etc/wireguard/wg0.conf ]; then
-      wg-quick down wg0 || true
-      wg-quick up wg0
+      refresh_wireguard
       touch /tmp/wg_initialized
     fi
   elif [ -f /etc/wireguard/wg0.conf ] && inotifywait -e modify /etc/wireguard/wg0.conf; then
-    wg-quick down wg0
-    wg-quick up wg0
+    refresh_wireguard
   fi
   sleep 1;
 done &
