@@ -6,14 +6,15 @@ set -euo pipefail
 iface_addr() { awk '$1 == "[Interface]" {iface=1; next}; iface == 1 && $1 == "Address" {print $3; exit}' /etc/wireguard/wg0.conf | tr ',' '\n'; }
 clear_nats() { iptables-save | grep -F -- '-j MASQUERADE' | sed 's/^-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables -t nat {}'; }
 nat_ip_ranges() { iface_addr | xargs -I {} iptables -t nat -A POSTROUTING -s '{}' -o eth0 -j MASQUERADE; }
-refresh_wireguard() {
+refresh_wireguard() (
+  set -x
   if ip link show wg0; then
     wg-quick down wg0
   fi
   wg-quick up wg0
   clear_nats
   nat_ip_ranges
-}
+)
 trap 'rm -f /tmp/wg_started' EXIT
 while true; do
   if [ ! -f /tmp/wg_started ]; then
