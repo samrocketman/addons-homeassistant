@@ -1,0 +1,27 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# daemon restarts wg interface on modification
+iface_addr() { awk '$1 == "[Interface]" {iface=1; next}; iface == 1 && $1 == "Address" {print $3; exit}' /etc/wireguard/wg0.conf | tr ',' '\n'; }
+clear_nats() { iptables-save | grep -F -- '-j MASQUERADE' | sed 's/^-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables -t nat {}'; }
+nat_ip_ranges() { iface_addr | xargs -I {} iptables -t nat -A POSTROUTING -s '{}' -o eth0 -j MASQUERADE; }
+refresh_wireguard() {
+  if ip link show wg0; then
+    wg-quick down wg0
+  fi
+  wg-quick up wg0
+  clear_nats
+  nat_ip_ranges
+}
+while true; do
+  if [ ! -f /etc/wireguard/wg0.conf ]; then
+    until [ -f /etc/wireguard/wg0.conf ]; do
+      sleep 1
+    done
+    refresh_wireguard
+  elif [ -f /etc/wireguard/wg0.conf ] && inotifywait -e modify /etc/wireguard/wg0.conf; then
+    refresh_wireguard
+  fi
+  sleep 1;
+done

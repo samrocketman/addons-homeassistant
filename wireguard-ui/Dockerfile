@@ -33,3 +33,5 @@ RUN \
 COPY --from=wg-ui /wireguard-ui /wireguard-ui
 
 COPY rootfs /
+
+RUN chmod 755 /usr/local/bin/refresh-wireguard.sh
