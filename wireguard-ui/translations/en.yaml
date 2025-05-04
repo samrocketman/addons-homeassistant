@@ -13,6 +13,7 @@ configuration:
   single_user_mode:
     name: Single User Mode
     description: >-
-      All users in Home Assistant access via single user admin.  If disabled, default user/password is `admin`/`admin`.
+      EXPERIMENTAL: All users in Home Assistant access via single user admin.
+      If disabled, default user/password is `admin`/`admin`.
 network:
   51820/udp: WireGuard Server Port
