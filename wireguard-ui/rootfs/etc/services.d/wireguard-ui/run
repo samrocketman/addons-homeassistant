@@ -12,10 +12,10 @@ declare port
 
 bashio::log.info 'Starting Wireguard UI...'
 
-dns=$(bashio::config 'Default Client DNS')
-endpoint=$(bashio::config 'Default Client Endpoint')
+dns=$(bashio::config 'default_client_dns')
+endpoint=$(bashio::config 'default_client_endpoint')
 port=$(bashio::addon.port '51820/udp')
-single_user=$(bashio::config 'Single User Mode')
+single_user=$(bashio::config 'single_user_mode')
 
 # Run wireguard-ui
 # wireguard-ui creates databases in `./db`

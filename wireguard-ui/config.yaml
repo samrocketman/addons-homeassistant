@@ -1,6 +1,6 @@
 ---
 name: Wireguard UI
-version: 1.1.27
+version: 1.1.28
 slug: wireguard-ui
 description: >-
   Web UI for provisioning and managing device keys and configurations for
@@ -16,14 +16,12 @@ privileged:
 panel_icon: mdi:vpn
 panel_title: WireGuard VPN
 options:
-  'Default Client Endpoint': ""
-  'Default Client DNS': ""
-  'Single User Mode': true
+  default_client_endpoint: ""
+  default_client_dns: "1.1.1.1"
+  single_user_mode: true
 schema:
-  'Default Client Endpoint': str
-  'Default Client DNS': str
-  'Single User Mode': bool
+  default_client_endpoint: str
+  default_client_dns: str
+  single_user_mode: bool
 ports:
   51820/udp: 51820
-ports_description:
-  51820/udp: Wireguard data

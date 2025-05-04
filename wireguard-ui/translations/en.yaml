@@ -1,0 +1,18 @@
+---
+configuration:
+  default_client_endpoint:
+    name: Default Client Endpoint
+    description: >-
+      The endpoint which clients will attempt to connect.  This option only
+      provides initial default.
+  default_client_dns:
+    name: Default Client DNS
+    description: >-
+      DNS used configured for wireguard clients when the connect to the server.
+      This option only provides initial default.
+  single_user_mode:
+    name: Single User Mode
+    description: >-
+      All users in Home Assistant access via single user admin.  If disabled, default user/password is `admin`/`admin`.
+network:
+  51820/udp: WireGuard Server Port
