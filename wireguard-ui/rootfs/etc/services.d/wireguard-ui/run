@@ -19,7 +19,7 @@ endpoint=$(bashio::config 'endpoint')
 port=$(bashio::addon.port '51820/udp')
 
 # daemon restarts wg interface on modification
-/usr/local/bin/refresh-wireguard.sh &
+nohup /usr/local/bin/refresh-wireguard.sh &
 
 # Run wireguard-ui
 # wireguard-ui creates databases in `./db`
