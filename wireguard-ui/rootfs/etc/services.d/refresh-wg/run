@@ -26,6 +26,7 @@ while true; do
     until [ -f /etc/wireguard/wg0.conf ]; do
       sleep 1
     done
+    touch /tmp/wg_started
     refresh_wireguard
   elif [ -f /etc/wireguard/wg0.conf ] && inotifywait -e modify /etc/wireguard/wg0.conf; then
     refresh_wireguard
