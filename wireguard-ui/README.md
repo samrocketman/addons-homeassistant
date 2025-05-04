@@ -3,6 +3,13 @@
 A basic, self-contained management service for WireGuard with a self-serve web
 UI.
 
+## Server Backend
+
+* Backend: [ngoduykhanh/wireguard-ui][ngoduykhanh/wireguard-ui]
+* wireguard-ui: 0.6.2
+
+[ngoduykhanh/wireguard-ui]: https://github.com/ngoduykhanh/wireguard-ui
+
 ## Features
 
 - Self-serve and web based
@@ -12,7 +19,9 @@ UI.
   module.
 - Binary and container deployment
 
-![Wireguard UI](https://github.com/user-attachments/assets/cf110630-859a-4364-b88f-2b21c1dc9b97)
+![Wireguard UI screenshot][wgui-screen]
+
+[wgui-screen]: images/wireguard-ui-home-assistant-screenshot.png
 
 ## Upgrading Wireguard UI
 
