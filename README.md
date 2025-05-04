@@ -13,4 +13,9 @@ the expected version of wireguard-ui utility.
     download-utilities.sh --update
     download-utilities.sh --checksum --invert-os-arch -I Linux:aarch64 -I Linux:armv7 -I Linux:x86_64
 
+### Upstream source
+
+This repository was originally forked from [theseal/addons-homeassistant][theseal].
+
+[theseal]: https://github.com/theseal/addons-homeassistant
 [yml-install-files]: https://github.com/samrocketman/yml-install-files
