@@ -6,11 +6,4 @@
 
 bashio::log.info "Starting NGinx..."
 
-WGUI_BASEPATH="${HOSTNAME/-/_}"
-(
-set -x
-if grep -F /WGUI_BASEPATH/ /etc/nginx/servers/ingress.conf; then
-  sed -i 's/\/WGUI_BASEPATH\//\/'"${WGUI_BASEPATH}"'\/ingress\//' /etc/nginx/servers/ingress.conf
-fi
-)
 exec nginx
