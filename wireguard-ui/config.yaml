@@ -1,6 +1,6 @@
 ---
 name: Wireguard UI
-version: 1.1.24
+version: 1.1.25
 slug: wireguard-ui
 description: >-
   Web UI for provisioning and managing device keys and configurations for
@@ -14,7 +14,7 @@ privileged:
   - NET_ADMIN
   - SYS_ADMIN
 panel_icon: mdi:vpn
-panel_title: WireGuard UI
+panel_title: WireGuard VPN
 options:
   endpoint: ""
   dns: ""
