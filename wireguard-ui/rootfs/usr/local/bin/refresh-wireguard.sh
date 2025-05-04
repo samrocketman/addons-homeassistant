@@ -14,8 +14,9 @@ refresh_wireguard() {
   clear_nats
   nat_ip_ranges
 }
+trap 'rm -f /tmp/wg_started' EXIT
 while true; do
-  if [ ! -f /etc/wireguard/wg0.conf ]; then
+  if [ ! -f /tmp/wg_started ]; then
     until [ -f /etc/wireguard/wg0.conf ]; do
       sleep 1
     done
