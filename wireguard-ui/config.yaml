@@ -1,6 +1,6 @@
 ---
 name: Wireguard UI
-version: 1.1.33
+version: 1.1.34
 slug: wireguard-ui
 description: >-
   Web UI for provisioning and managing device keys and configurations for
