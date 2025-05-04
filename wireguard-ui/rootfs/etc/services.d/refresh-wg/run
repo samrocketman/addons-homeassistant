@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+default_nic="$(ip route | grep default | awk '{print $5}')"
+export default_nic
+
 # daemon restarts wg interface on modification
 iface_addr() { awk '$1 == "[Interface]" {iface=1; next}; iface == 1 && $1 == "Address" {print $3; exit}' /etc/wireguard/wg0.conf | tr ',' '\n'; }
 clear_nats() {
@@ -10,7 +13,7 @@ clear_nats() {
   fi
   iptables-save | grep -F -- '-j MASQUERADE' | sed 's/^-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables -t nat {}'
 }
-nat_ip_ranges() { iface_addr | xargs -I {} iptables -t nat -A POSTROUTING -s '{}' -o eth0 -j MASQUERADE; }
+nat_ip_ranges() { iface_addr | xargs -I {} iptables -t nat -A POSTROUTING -s '{}' -o "${default_nic}" -j MASQUERADE; }
 refresh_wireguard() (
   set -x
   if ip link show wg0; then

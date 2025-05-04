@@ -5,7 +5,6 @@
 # Runs the Wireguard UI
 # ==============================================================================
 
-# auto-export environment variables
 declare default_nic
 declare dns
 declare endpoint
@@ -13,10 +12,10 @@ declare port
 
 bashio::log.info 'Starting Wireguard UI...'
 
-default_nic=$(ip route | grep default | awk '{print $5}')
-dns=$(bashio::config 'dns')
-endpoint=$(bashio::config 'endpoint')
+dns=$(bashio::config 'Default Client DNS')
+endpoint=$(bashio::config 'Default Client Endpoint')
 port=$(bashio::addon.port '51820/udp')
+single_user=$(bashio::config 'Single User Mode')
 
 # Run wireguard-ui
 # wireguard-ui creates databases in `./db`
@@ -28,10 +27,12 @@ WGUI_DEFAULT_CLIENT_ALLOWED_IPS="0.0.0.0/0,::/0"
 WGUI_DNS="${dns:-1.1.1.1}"
 WGUI_ENDPOINT_ADDRESS="${endpoint}:${port%/*}"
 WGUI_LOG_LEVEL=debug
+WGUI_MTU=1420
 WGUI_SERVER_LISTEN_PORT="${port%/*}"
-export WGUI_DEFAULT_CLIENT_ALLOWED_IPS WGUI_DNS WGUI_ENDPOINT_ADDRESS WGUI_LOG_LEVEL WGUI_SERVER_LISTEN_PORT
-exec /wireguard-ui \
-  -disable-login \
-  -bind-address "127.0.0.1:8080"
-#    --auth-user-header=X-Hass-User-ID                   \
-#    --nat-device=${default_nic}                         \
+export WGUI_DEFAULT_CLIENT_ALLOWED_IPS WGUI_DNS WGUI_ENDPOINT_ADDRESS
+export WGUI_LOG_LEVEL WGUI_MTU WGUI_SERVER_LISTEN_PORT
+wgui_args=( -bind-address "127.0.0.1:8080" )
+if [ "${single_user:-}" = true ]; then
+  wgui_args+=( -disable-login )
+fi
+exec /wireguard-ui "${wgui_args[@]}"
