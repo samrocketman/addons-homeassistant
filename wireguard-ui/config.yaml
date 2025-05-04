@@ -1,6 +1,6 @@
 ---
 name: Wireguard UI
-version: 1.1.23
+version: 1.1.24
 slug: wireguard-ui
 description: >-
   Web UI for provisioning and managing device keys and configurations for
@@ -16,8 +16,8 @@ privileged:
 panel_icon: mdi:vpn
 panel_title: WireGuard UI
 options:
-  endpoint: null
-  dns: null
+  endpoint: ""
+  dns: ""
 schema:
   endpoint: str
   dns: str
