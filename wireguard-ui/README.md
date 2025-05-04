@@ -12,7 +12,7 @@ UI.
   module.
 - Binary and container deployment
 
-![Wireguard UI in the Home Assistant Frontend](https://github.com/theseal/addons-homeassistant/raw/main/wireguard-ui/images/wireguard-ui-home-assistant-screenshot.png)
+![Wireguard UI](https://github.com/user-attachments/assets/cf110630-859a-4364-b88f-2b21c1dc9b97)
 
 ## Upgrading Wireguard UI
 

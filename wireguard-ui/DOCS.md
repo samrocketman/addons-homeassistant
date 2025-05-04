@@ -14,8 +14,8 @@ A basic, self-contained management service for WireGuard with a self-serve web U
 
 The installation of this add-on is pretty straightforward and not different in comparison to installing any other add-on.
 
-* Add my [Home Assistant add-ons repository](https://github.com/theseal/addons-homeassistant) to your home assistant instance.
-* Install the add-on.
+* [Wireguard UI add-ons repository](https://github.com/samrocketman/addons-homeassistant) to your home assistant instance.
+* Install the "Wireguard UI".
 * Edit the configuration (see below)
 * Click the Save button to store your configuration.
 * Start the add-on.

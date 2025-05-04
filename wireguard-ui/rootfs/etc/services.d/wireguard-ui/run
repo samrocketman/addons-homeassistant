@@ -6,8 +6,6 @@
 # ==============================================================================
 
 # auto-export environment variables
-set -E
-
 declare default_nic
 declare dns
 declare endpoint
@@ -46,6 +44,7 @@ WGUI_DNS="${dns:-1.1.1.1}"
 WGUI_ENDPOINT_ADDRESS="${endpoint}:${port%/*}"
 WGUI_LOG_LEVEL=debug
 WGUI_SERVER_LISTEN_PORT="${port%/*}"
+export WGUI_DEFAULT_CLIENT_ALLOWED_IPS WGUI_DNS WGUI_ENDPOINT_ADDRESS WGUI_LOG_LEVEL WGUI_SERVER_LISTEN_PORT
 exec /wireguard-ui \
   -disable-login \
   -bind-address "127.0.0.1:8080"
