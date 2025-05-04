@@ -41,9 +41,10 @@ done &
 cd /data
 
 # customizations from home assistant
+WGUI_DEFAULT_CLIENT_ALLOWED_IPS="0.0.0.0/0,::/0"
 WGUI_DNS="${dns:-1.1.1.1}"
-WGUI_LOG_LEVEL=debug
 WGUI_ENDPOINT_ADDRESS="${endpoint}:${port%/*}"
+WGUI_LOG_LEVEL=debug
 WGUI_SERVER_LISTEN_PORT="${port%/*}"
 exec /wireguard-ui \
   -disable-login \
