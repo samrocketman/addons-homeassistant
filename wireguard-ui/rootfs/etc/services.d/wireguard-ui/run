@@ -23,7 +23,7 @@ single_user=$(bashio::config 'single_user_mode')
 cd /data
 # missing state dir causes login loops
 [ -d db ] || mkdir db
-if [ ! -f session-key ] || [ -z "$(<session-key)"]; then
+if [ ! -f session-key ] || [ -z "$(<session-key)" ]; then
   uuidgen > session-key
   echo "Generated session key" >&2
 fi
