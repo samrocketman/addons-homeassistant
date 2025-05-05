@@ -1,58 +1,41 @@
-# Home Assistant Add-on: WireGuard UI
+# Getting started
 
-A basic, self-contained management service for WireGuard with a self-serve web UI.
+1. Set a static IP address for Home Assistant (from your router or from
+   Home Assistant settings).
+2. Optionally set some configuration before starting.
+3. Port forward from your router `51820/udp` to Home Assistant.  If you change
+   the default configuration, then port forward accordingly.
+3. Start the service.
 
-## Features
+## First time configuration
 
-* Self-serve and web based
-* QR-Code for convenient mobile client configuration
-* Optional multi-user support behind an authenticating proxy
-* Zero external dependencies - just a single binary using the wireguard kernel module
-* Binary and container deployment
+1. Visit WireGuard UI frontend.
+2. Under _Settings > Global Settings_ click _Suggest_ next to `Endpoint
+   Address`.  Add the UDP port which you forwarded from your router.  If you
+   left everything default, then you'll set `<IP address>:51820`.
+3. DNS Servers - You can leave this default.  If you have AdGuard installed your
+   VPN clients will already be using it.
+4. Persistent Keepalive - Disabled by default.  This is suggested because your
+   VPN will be undetected if it's not sending traffic.  Another sane value if
+   you want to have a persistent keepalive is `15` seconds.
 
-## Installation
+## Single User Mode
 
-The installation of this add-on is pretty straightforward and not different in comparison to installing any other add-on.
+All Home Assistant users can access WireGuard UI as a no-login administrator.
+Single user mode is protected by Home Assistant ingress so it is not anonymously
+available on your network.
 
-* [Wireguard UI add-ons repository](https://github.com/samrocketman/addons-homeassistant) to your home assistant instance.
-* Install the "Wireguard UI".
-* Edit the configuration (see below)
-* Click the Save button to store your configuration.
-* Start the add-on.
-* Open the webUI and adapt the software options
+> Note: Toggling `Single User Mode` in configuration page on or off will always
+> preserve your VPN settings and WireGuard UI configuration.  It is a safe
+> toggle.
 
-## Configuration
+## Multi-User Mode
 
-**Note**: _Remember to restart the add-on when the configuration is changed._
+If you disable `Single User Mode` in addon configuration, then you will be
+presented with a login page when visiting WireGuard UI web UI.
 
-A little more extensive example add-on configuration:
+* Default username: `admin`
+* Default password: `admin`
 
-```yaml
-endpoint: myautomatedhome.duckdns.org
-dns: 1.1.1.1
-```
-
-**Note**: _This is just an example, don't copy and paste it! Create your own!_
-
-### Option: `endpoint`
-
-This configuration option is the hostname that your clients will use to connect
-to your WireGuard add-on. The `host` is mainly used to generate client
-configurations and SHOULD NOT contain a port. If you want to change the port,
-use the "Network" section of the add-on configuration.
-
-Example: `myautomatedhome.duckdns.org`, for local testing `hassio.local`
-will actually work.
-
-DO NOT attempt to use a URL such as a Nabu Casa endpoint, the entry needs to be
-either a DNS entry or IP address that is accessible by the clients.
-
-### Option: `dns` _(optional)_
-
-A DNS server used by the add-on and the configuration generated for
-the clients. This configuration option is optional but highly recommended
-
-## Network configuration/ports
-
-### Port: `51820/udp`
-Port of the endpoint which the clients will connect through (the port you need to forward in your router)
+You are advised to change the password after log in and set up more users as you
+see fit.

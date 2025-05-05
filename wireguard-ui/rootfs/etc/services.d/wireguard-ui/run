@@ -5,17 +5,32 @@
 # Runs the Wireguard UI
 # ==============================================================================
 
-declare default_nic
 declare dns
 declare endpoint
 declare port
+declare single_user
+declare user_loglevel
 
 bashio::log.info 'Starting Wireguard UI...'
 
 dns=$(bashio::config 'default_client_dns')
 endpoint=$(bashio::config 'default_client_endpoint')
 port=$(bashio::addon.port '51820/udp')
-single_user=$(bashio::config 'single_user_mode') 
+single_user=$(bashio::config 'single_user_mode')
+user_loglevel=$(bashio::config 'log_level')
+
+# wireguard-ui will SHA512 checksum the contents of the random password and use
+# that as the password to encrypt sessions.
+random_password() (
+  set -eo pipefail
+  local chars='-;.~,.<>[]{}!@#$%^&*()_+=`0-9a-zA-Z'
+  if [ -n "${1:-}" ]; then
+    chars="${1}"
+  fi
+  # tr will exit with 141 because its stdout is cut short by head
+  tr -dc -- "${chars}" < /dev/urandom | head -c128 || [ "$?" -eq 141 ]
+  echo
+)
 
 # Run wireguard-ui
 # wireguard-ui creates databases in `./db`
@@ -24,19 +39,35 @@ cd /data
 # missing state dir causes login loops
 [ -d db ] || mkdir db
 if [ ! -f session-key ] || [ -z "$(<session-key)" ]; then
-  uuidgen > session-key
+  random_password > session-key
   echo "Generated session key" >&2
 fi
 export SESSION_SECRET_FILE=session-key
 # customizations from home assistant
 WGUI_DEFAULT_CLIENT_ALLOWED_IPS="0.0.0.0/0,::/0"
-WGUI_DNS="${dns:-1.1.1.1}"
+if [ -z "${dns:-}" ]; then
+  WGUI_DNS="$(ip route | awk '$1 == "default" { print $3 }')"
+else
+  WGUI_DNS="${dns}"
+fi
 WGUI_ENDPOINT_ADDRESS="${endpoint}:${port%/*}"
-WGUI_LOG_LEVEL=debug
+case "${user_loglevel:-}" in
+  debug|info|warn|error|off)
+    WGUI_LOG_LEVEL="${user_loglevel}"
+    ;;
+  *)
+    WGUI_LOG_LEVEL=debug
+    ;;
+esac
 WGUI_MTU=1420
+WGUI_PERSISTENT_KEEPALIVE=0
 WGUI_SERVER_LISTEN_PORT="${port%/*}"
 export WGUI_DEFAULT_CLIENT_ALLOWED_IPS WGUI_DNS WGUI_ENDPOINT_ADDRESS
-export WGUI_LOG_LEVEL WGUI_MTU WGUI_SERVER_LISTEN_PORT
+export WGUI_LOG_LEVEL WGUI_MTU WGUI_PERSISTENT_KEEPALIVE
+export WGUI_SERVER_LISTEN_PORT
+if [ -f /applied_patches ]; then
+  cat /applied_patches
+fi
 wgui_args=( -bind-address "127.0.0.1:8080" )
 if [ "${single_user:-}" = true ]; then
   wgui_args+=( -disable-login )

@@ -1,7 +1,6 @@
 # Home Assistant Add-on: Wireguard UI
 
-A basic, self-contained management service for WireGuard with a self-serve web
-UI.
+A friendly web frontend for managing WireGuard clients through Home Assistant.
 
 ## Server Backend
 
@@ -14,8 +13,7 @@ UI.
 
 - Self-serve and web based.
 - QR-Code for convenient mobile client configuration.
-- Optional single-user or multi-user support behind an authenticating proxy.
+- Optional single-user or multi-user support behind authenticated ingress.
+- See Addon Documentation after installing for getting started.
 
-![Wireguard UI screenshot][wgui-screen]
-
-[wgui-screen]: images/wireguard-ui-home-assistant-screenshot.png
+![Wireguard UI screenshot](https://github.com/samrocketman/addons-homeassistant/raw/main/wireguard-ui/images/wireguard-ui-home-assistant-screenshot.png)

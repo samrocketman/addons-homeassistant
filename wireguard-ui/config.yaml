@@ -1,6 +1,7 @@
 ---
 name: Wireguard UI
-version: 1.1.56
+version: 1.1.57
+url: https://github.com/samrocketman/addons-homeassistant/tree/main/wireguard-ui
 slug: wireguard-ui
 description: >-
   Web UI for provisioning and managing device keys and configurations for
@@ -16,12 +17,11 @@ privileged:
 panel_icon: mdi:vpn
 panel_title: WireGuard VPN
 options:
-  default_client_endpoint: ""
-  default_client_dns: "1.1.1.1"
   single_user_mode: true
 schema:
-  default_client_endpoint: str
-  default_client_dns: str
   single_user_mode: bool
+  default_client_dns: str?
+  default_client_endpoint: str?
+  log_level: list(debug|info|warn|error|off)?
 ports:
   51820/udp: 51820
