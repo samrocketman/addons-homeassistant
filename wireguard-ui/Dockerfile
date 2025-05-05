@@ -1,6 +1,8 @@
 #
 # Build wireguard-ui from source
 #
+ARG BUILD_FROM
+FROM ${BUILD_FROM}
 FROM golang:1.21-alpine3.19 AS builder
 SHELL ["/bin/sh", "-exc"]
 ENV APP_VERSION="WireGuard UI For Home Assistant"
@@ -68,7 +70,6 @@ RUN \
 #
 # Home Assistant Add-on
 #
-ARG BUILD_FROM
 FROM ${BUILD_FROM}
 SHELL ["/bin/bash", "-exo", "pipefail", "-c"]
 RUN \
