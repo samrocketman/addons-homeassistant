@@ -21,7 +21,7 @@ single_user=$(bashio::config 'single_user_mode')
 # wireguard-ui creates databases in `./db`
 # /data is a persistent path in the container
 cd /data
-if [ ! -f session-key ]; then
+if [ ! -f session-key ] || [ -z "$(<session-key)"]; then
   uuidgen > session-key
   echo "Generated session key" >&2
 fi

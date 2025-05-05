@@ -21,6 +21,7 @@ RUN \
         wireguard-tools \
         iptables \
         inotify-tools \
+        uuidgen-runtime \
 	    && rm -fr \
         /tmp/* \
         /var/{cache,log}/* \
