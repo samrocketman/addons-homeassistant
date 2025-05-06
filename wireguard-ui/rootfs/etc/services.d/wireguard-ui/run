@@ -14,12 +14,12 @@ declare user_loglevel
 
 bashio::log.info 'Starting Wireguard UI...'
 
-clear_session_on_boot=$(bashio::config 'clear_session_on_boot')
-dns=$(bashio::config 'default_client_dns')
-endpoint=$(bashio::config 'default_client_endpoint')
-port=$(bashio::addon.port '51820/udp')
-single_user=$(bashio::config 'single_user_mode')
-user_loglevel=$(bashio::config 'log_level')
+clear_session_on_boot=$(bashio::config 'clear_session_on_boot' || echo '')
+dns=$(bashio::config 'default_client_dns' || echo '')
+endpoint=$(bashio::config 'default_client_endpoint' || echo '')
+port=$(bashio::addon.port '51820/udp' || echo '')
+single_user=$(bashio::config 'single_user_mode' || echo '')
+user_loglevel=$(bashio::config 'log_level' || echo '')
 
 # wireguard-ui will SHA512 checksum the contents of the random password and use
 # that as the password to encrypt sessions.
