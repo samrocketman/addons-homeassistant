@@ -1,11 +1,11 @@
 ---
 name: Wireguard UI
-version: 1.1.63
+version: 1.1.64
 url: https://github.com/samrocketman/addons-homeassistant/tree/main/wireguard-ui
 slug: wireguard-ui
 description: >-
   Web UI for provisioning and managing device keys and configurations for
-  WireGuard.
+  WireGuard
 arch:
   - aarch64
   - amd64
@@ -20,6 +20,7 @@ options:
   single_user_mode: true
 schema:
   single_user_mode: bool
+  clear_session_on_boot: bool?
   default_client_dns: str?
   default_client_endpoint: str?
   log_level: list(debug|info|warn|error|off)?

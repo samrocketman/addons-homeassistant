@@ -18,5 +18,8 @@ configuration:
   log_level:
     name: Log Level
     description: This option sets the log level of WireGuard UI.
+  clear_session_on_boot:
+    name: Clear sessions on reboot
+    description: Changes key used to encrypt session tokens.  Existing sessions will invalidate on reboot.
 network:
   51820/udp: WireGuard Server Port.  This must match the WireGuard UI setting.

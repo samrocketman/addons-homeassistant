@@ -5,6 +5,7 @@
 # Runs the Wireguard UI
 # ==============================================================================
 
+declare clear_session_on_boot
 declare dns
 declare endpoint
 declare port
@@ -13,6 +14,7 @@ declare user_loglevel
 
 bashio::log.info 'Starting Wireguard UI...'
 
+clear_session_on_boot=$(bashio::config 'clear_session_on_boot')
 dns=$(bashio::config 'default_client_dns')
 endpoint=$(bashio::config 'default_client_endpoint')
 port=$(bashio::addon.port '51820/udp')
@@ -38,6 +40,9 @@ random_password() (
 cd /data
 # missing state dir causes login loops
 [ -d db ] || mkdir db
+if [ "${clear_session_on_boot:-}" = true ]; then
+  rm -f session-key
+fi
 if [ ! -f session-key ] || [ -z "$(<session-key)" ]; then
   random_password > session-key
   echo "Generated session key" >&2
