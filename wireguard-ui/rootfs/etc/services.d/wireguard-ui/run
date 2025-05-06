@@ -46,7 +46,7 @@ if [ "${clear_session_on_boot:-}" = true ]; then
 fi
 if [ ! -f session-key ] || [ -z "$(<session-key)" ]; then
   random_password > session-key
-  echo "Generated session key" >&2
+  echo "Generated new session encryption key." >&2
 fi
 export SESSION_SECRET_FILE=session-key
 # customizations from home assistant
