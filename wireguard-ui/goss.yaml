@@ -1,0 +1,30 @@
+file:
+    /bin/bash:
+        exists: true
+        mode: "0755"
+        owner: root
+        group: root
+        filetype: file
+        contents: []
+    /sbin/ip:
+        exists: true
+        mode: "0777"
+        owner: root
+        group: root
+        linked-to: /bin/ip
+        filetype: symlink
+        contents: []
+    /usr/bin/wg-quick:
+        exists: true
+        mode: "0755"
+        owner: root
+        group: root
+        filetype: file
+        contents: []
+    /usr/sbin/nginx:
+        exists: true
+        mode: "0755"
+        owner: root
+        group: root
+        filetype: file
+        contents: []
