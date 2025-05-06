@@ -3,13 +3,14 @@ configuration:
   default_client_endpoint:
     name: Default Client Endpoint
     description: >-
-      The endpoint which clients will attempt to connect.  This option only
-      provides initial default.
+      The public endpoint WireGuard clients will attempt to connect.  This option only
+      provides initial default.  Prefer the Web UI auto-discovery.
   default_client_dns:
     name: Default Client DNS
     description: >-
-      DNS used configured for wireguard clients when the connect to the server.
-      This option only provides initial default.
+      Primary DNS for WireGuard clients when connected to the server.
+      This option only provides initial default.  Home Assistant
+      internal DNS is default.
   single_user_mode:
     name: Single User Mode
     description: >-
