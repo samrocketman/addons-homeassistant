@@ -95,6 +95,7 @@ RUN \
     /etc/nginx; \
   mkdir -p /var/log/nginx; \
   touch /var/log/nginx/error.log
+RUN mkdir -p /var/cache/nginx/client_temp
 COPY --from=builder /wireguard-ui /wireguard-ui
 COPY --from=builder /applied_patches /applied_patches
 COPY rootfs /
