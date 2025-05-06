@@ -76,13 +76,7 @@ FROM ${BUILD_FROM}
 SHELL ["/bin/bash", "-exo", "pipefail", "-c"]
 RUN \
   apt-get update; \
-  apt-get install -y --no-install-recommends curl gnupg2 ca-certificates lsb-release debian-archive-keyring; \
-  curl -sSfL https://nginx.org/keys/nginx_signing.key | gpg --dearmor > /usr/share/keyrings/nginx-archive-keyring.gpg; \
-  echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/debian `lsb_release -cs` nginx" > /etc/apt/sources.list.d/nginx.list; \
-  echo -e "Package: *\nPin: origin nginx.org\nPin: release o=nginx\nPin-Priority: 900\n" > /etc/apt/preferences.d/99nginx; \
-  apt-get update; \
   apt-get install -y --no-install-recommends \
-    iproute2 \
     nginx \
     ca-certificates \
     wireguard-tools \
@@ -92,10 +86,10 @@ RUN \
     /tmp/* \
     /var/{cache,log}/* \
     /var/lib/apt/lists/* \
-    /etc/nginx; \
+    /etc/nginx
+RUN \
   mkdir -p /var/log/nginx; \
   touch /var/log/nginx/error.log
-RUN mkdir -p /var/cache/nginx/client_temp
 COPY --from=builder /wireguard-ui /wireguard-ui
 COPY --from=builder /applied_patches /applied_patches
 COPY rootfs /
