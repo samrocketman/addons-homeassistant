@@ -30,7 +30,8 @@ random_password() (
     chars="${1}"
   fi
   # tr will exit with 141 because its stdout is cut short by head
-  tr -dc -- "${chars}" < /dev/urandom | head -c128 || [ "$?" -eq 141 ]
+  tr -dc -- "${chars}" 2> /dev/null < /dev/urandom | \
+    head -c128 || [ "$?" -eq 141 ]
   echo
 )
 
