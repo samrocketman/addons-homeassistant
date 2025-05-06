@@ -24,7 +24,7 @@ user_loglevel=$(bashio::config 'log_level')
 # wireguard-ui will SHA512 checksum the contents of the random password and use
 # that as the password to encrypt sessions.
 random_password() (
-  set -eo pipefail
+  set +eo pipefail
   local chars='-;.~,.<>[]{}!@#$%^&*()_+=`0-9a-zA-Z'
   if [ -n "${1:-}" ]; then
     chars="${1}"
