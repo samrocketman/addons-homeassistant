@@ -14,8 +14,8 @@ configuration:
   single_user_mode:
     name: Single User Mode
     description: >-
-      EXPERIMENTAL: All users in Home Assistant access via single user admin.
-      If disabled, default user/password is `admin`/`admin`.
+      All users in Home Assistant access via single user admin.  If disabled,
+      default user/password is `admin`/`admin`.
   log_level:
     name: Log Level
     description: This option sets the log level of WireGuard UI.
