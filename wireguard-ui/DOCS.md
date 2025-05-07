@@ -39,3 +39,32 @@ presented with a login page when visiting WireGuard UI web UI.
 
 You are advised to change the password after log in and set up more users as you
 see fit.
+
+## Subnet Ranges
+
+> Subnet ranges configuration is not available from within the web UI and
+> requires a server restart in order to apply.
+
+All subnet ranges must fall within _Server Interface Addresses_ found on
+_Wireguard Server_ page.  A subnet range is a CIDR.
+
+This feature is intended for subdivision of large wireguard servers, such as
+`/16` subnets.  Allocate smaller blocks of the server address space for specific
+purposes and easier firewalling.
+
+The format is very specific:
+
+```
+<some name>:CIDR,CIDR,CIDR
+```
+
+For example, the following is defining multiple subnet ranges.
+
+```
+Home:10.252.1.0/24; Office Space:10.38.14.0/16,10.39.1.0/24
+```
+
+Note:
+
+* After `:` there's no spaces.
+* Multiple CIDRs are comma separated.  Such as those in `Office Space`.
