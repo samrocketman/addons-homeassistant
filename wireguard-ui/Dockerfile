@@ -33,12 +33,10 @@ RUN \
       echo "  $2" >> /applied_patches; \
       echo "    Applied from commit: $1" >> /applied_patches; \
   }; \
+  apply_patch 36be3a7ac9b3dcbeea3fb8724fd5db4acb94eaa1 "PR670: Rename session tokens to have wgui prefix; https://github.com/ngoduykhanh/wireguard-ui/pull/670"; \
   apply_patch b3ff328afc56bf449c022454f9a1243f167ce742 "PR660: Fix default MTU to 1420; https://github.com/ngoduykhanh/wireguard-ui/pull/660"; \
   apply_patch 8b75583a0470035d93320fc14c8d8e7f69e4a61a "PR653: Add login logging for banning brute force attacks; https://github.com/ngoduykhanh/wireguard-ui/pull/653"; \
-  apply_patch 3064ec79a6710a2956596a69c80ba0c24d408ed7 "PR573: Update about.html to open page in a new tab; https://github.com/ngoduykhanh/wireguard-ui/pull/573"; \
-  sed -i 's/"session"/"wgui_session"/g' handler/routes.go handler/session.go; \
-  sed -i 's/"session_token"/"wgui_session_token"/g' handler/routes.go handler/session.go; \
-  echo 'WireGuid UI session tokens have wgui_ prefix.' >> /applied_patches
+  apply_patch 3064ec79a6710a2956596a69c80ba0c24d408ed7 "PR573: Update about.html to open page in a new tab; https://github.com/ngoduykhanh/wireguard-ui/pull/573"
 # Prepare assets
 RUN yarn install --pure-lockfile --production && \
     yarn cache clean
