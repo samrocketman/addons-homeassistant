@@ -11,6 +11,8 @@ declare endpoint
 declare port
 declare single_user
 declare user_loglevel
+declare user_loglevel
+declare subnet_ranges
 
 bashio::log.info 'Starting Wireguard UI...'
 
@@ -20,6 +22,7 @@ endpoint=$(bashio::config 'default_client_endpoint' || echo '')
 port=$(bashio::addon.port '51820/udp' || echo '')
 single_user=$(bashio::config 'single_user_mode' || echo '')
 user_loglevel=$(bashio::config 'log_level' || echo '')
+subnet_ranges=$(bashio::config 'subnet_ranges' || echo '')
 
 # wireguard-ui will SHA512 checksum the contents of the random password and use
 # that as the password to encrypt sessions.
@@ -68,9 +71,10 @@ esac
 WGUI_MTU=1420
 WGUI_PERSISTENT_KEEPALIVE=0
 WGUI_SERVER_LISTEN_PORT="${port%/*}"
+SUBNET_RANGES="${subnet_ranges:-}"
 export WGUI_DEFAULT_CLIENT_ALLOWED_IPS WGUI_DNS WGUI_ENDPOINT_ADDRESS
 export WGUI_LOG_LEVEL WGUI_MTU WGUI_PERSISTENT_KEEPALIVE
-export WGUI_SERVER_LISTEN_PORT
+export WGUI_SERVER_LISTEN_PORT SUBNET_RANGES
 if [ -f /applied_patches ]; then
   cat /applied_patches
 fi

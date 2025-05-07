@@ -1,6 +1,6 @@
 ---
 name: Wireguard UI
-version: 1.1.93
+version: 1.1.94
 url: https://github.com/samrocketman/addons-homeassistant/tree/main/wireguard-ui
 slug: wireguard-ui
 description: >-
@@ -18,9 +18,11 @@ panel_icon: mdi:vpn
 panel_title: WireGuard VPN
 options:
   single_user_mode: true
+# https://developers.home-assistant.io/docs/add-ons/configuration/#options--schema
 schema:
   single_user_mode: bool
   clear_session_on_boot: bool?
+  subnet_ranges: "match(^(;? ?[^:]+:[/0-9.,]+)*$)"
   default_client_dns: str?
   default_client_endpoint: str?
   log_level: list(debug|info|warn|error|off)?
