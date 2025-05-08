@@ -1,18 +1,53 @@
-#!/bin/bash
+#!/usr/bin/with-contenv bashio
+# shellcheck disable=SC2191
 
 set -euo pipefail
 
+bashio::log.info 'Starting wg0.conf monitor...'
+
+dmz_subnets=$(bashio::config 'dmz_subnets' || echo '')
+export dmz_subnets
+if [ "${dmz_subnets:-}" = null ]; then
+  unset dmz_subnets
+fi
+
 default_nic="$(ip route | grep default | awk '{print $5}')"
-export default_nic
+default_route_ip="$(ip route | awk '$1 == "default" { print $3 }')"
+export default_nic default_route_ip
+
+check_or_add_rule() (
+  case "$1" in
+    -I|-A)
+      add_args=( "$@" )
+      shift
+      check_args=( "$@" )
+      ;;
+    *)
+      add_args=( -A "$@" )
+      check_args=( "$@" )
+      ;;
+  esac
+  set -x
+  iptables -C "${check_args[@]}" &> /dev/null || iptables "${add_args[@]}"
+)
 
 # daemon restarts wg interface on modification
 iface_addr() { awk '$1 == "[Interface]" {iface=1; next}; iface == 1 && $1 == "Address" {print $3; exit}' /etc/wireguard/wg0.conf | tr ',' '\n'; }
-clear_nats() {
+clear_dmz_rules() (
+  set +o pipefail
+  iptables-save | grep -F -- '-A OUTPUT' | grep -F -- '-j WG_DMZ' | sed 's/-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables {}'
+)
+add_dmz_rules() {
+  if [ -z "${dmz_subnets:-}" ]; then return; fi
+  echo "$dmz_subnets" | xargs -n1 | xargs -I{} -- iptables -I OUTPUT -s {} -j WG_DMZ
+}
+clear_nats() (
   if ! iptables-save | grep -F -- '-j MASQUERADE'; then
     return
   fi
+  set +o pipefail
   iptables-save | grep -F -- '-j MASQUERADE' | sed 's/^-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables -t nat {}'
-}
+)
 nat_ip_ranges() { iface_addr | xargs -I {} iptables -t nat -A POSTROUTING -s '{}' -o "${default_nic}" -j MASQUERADE; }
 refresh_wireguard() (
   set -x
@@ -21,9 +56,29 @@ refresh_wireguard() (
   fi
   wg-quick up wg0
   clear_nats
+  clear_dmz_rules
+  add_dmz_rules
   nat_ip_ranges
+  if [ -n "${dmz_subnets:-}" ]; then
+    iptables -nL
+  fi
 )
 trap 'rm -f /tmp/wg_started' EXIT
+#
+# Create wireguard DMZ
+#
+iptables -L WG_DMZ &> /dev/null || iptables --new WG_DMZ
+# allow DNS requests in DMZ
+check_or_add_rule -I WG_DMZ -d "${default_route_ip}" -p udp -m udp --dport 53 -j RETURN
+check_or_add_rule -I WG_DMZ -d "${default_route_ip}" -p tcp -m tcp --dport 53 -j RETURN
+# rfc1918 private IP spaces
+check_or_add_rule WG_DMZ -d 10.0.0.0/8 -j DROP
+check_or_add_rule WG_DMZ -d 172.16.0.0/12 -j DROP
+check_or_add_rule WG_DMZ -d 192.168.0.0/16 -j DROP
+check_or_add_rule WG_DMZ -j RETURN
+#
+# Watch for changes
+#
 while true; do
   if [ ! -f /tmp/wg_started ]; then
     until [ -f /etc/wireguard/wg0.conf ]; do

@@ -68,3 +68,12 @@ Note:
 
 * After `:` there's no spaces.
 * Multiple CIDRs are comma separated.  Such as those in `Office Space`.
+
+## DMZ Subnets
+
+DMZ or Demilitarized Zone in networking strictly grants only internet access
+through the VPN.  Useful to allow friends or family to route through your VPN
+without granting them local access.
+
+Format is one or more space-separated CIDRs.  The CIDR should match one of your
+wireguard networks.
