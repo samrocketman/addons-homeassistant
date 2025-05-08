@@ -72,9 +72,9 @@ iptables -L WG_DMZ &> /dev/null || iptables --new WG_DMZ
 check_or_add_rule -I WG_DMZ -d "${default_route_ip}" -p udp -m udp --dport 53 -j RETURN
 check_or_add_rule -I WG_DMZ -d "${default_route_ip}" -p tcp -m tcp --dport 53 -j RETURN
 # rfc1918 private IP spaces
-check_or_add_rule WG_DMZ -d 10.0.0.0/8 -j DROP
-check_or_add_rule WG_DMZ -d 172.16.0.0/12 -j DROP
-check_or_add_rule WG_DMZ -d 192.168.0.0/16 -j DROP
+check_or_add_rule WG_DMZ -d 10.0.0.0/8 -j REJECT --reject-with icmp-net-prohibited
+check_or_add_rule WG_DMZ -d 172.16.0.0/12 -j REJECT --reject-with icmp-net-prohibited
+check_or_add_rule WG_DMZ -d 192.168.0.0/16 -j REJECT --reject-with icmp-net-prohibited
 check_or_add_rule WG_DMZ -j RETURN
 #
 # Watch for changes
