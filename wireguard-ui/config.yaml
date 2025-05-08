@@ -23,7 +23,7 @@ schema:
   single_user_mode: bool
   clear_session_on_boot: bool?
   subnet_ranges: "match(^(;? ?[^:]+:[/0-9.,]+)*$)?"
-  dmz_subnets: "match(^(([0-9]{1,3}\.?){4}/[0-9]{1,2})?( ([0-9]{1,3}\.?){4}/[0-9]{1,2})*$)?"
+  dmz_subnets: "match(^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2})?( [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2})*$)?"
   default_client_dns: str?
   default_client_endpoint: str?
   log_level: list(debug|info|warn|error|off)?

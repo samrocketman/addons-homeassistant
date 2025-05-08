@@ -31,8 +31,8 @@ configuration:
   dmz_subnets:
     name: DMZ Subnets
     description: >-
-      You can designate one or more wireguard subnets which are considered demilitarized
-      zones.  Hosts may only access the internet and not local networks.
-
+      One or more space-speparated CIDRs.  Wireguard subnets which are
+      considered demilitarized zones.  Hosts may only access the internet and
+      not local networks.
 network:
   51820/udp: WireGuard Server Port.  This must match the WireGuard UI setting.
