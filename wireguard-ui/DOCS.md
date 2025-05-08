@@ -68,3 +68,27 @@ Note:
 
 * After `:` there's no spaces.
 * Multiple CIDRs are comma separated.  Such as those in `Office Space`.
+
+## DMZ Subnet
+
+DMZ or Demilitarized Zone in networking strictly grants only internet access
+through the VPN.  Useful to allow friends or family to route through your VPN
+without granting them local access.
+
+To configure a Wireguard DMZ Subnet:
+
+- Add a new network under your WireGuard server configuration.  For example,
+  `10.252.2.0/24`.
+- Configure both _Subnet Ranges_ and _DMZ Subnet_.
+
+Example _Subnet Ranges_ configuration:
+
+```
+Home:10.252.1.0/24; DMZ Network:10.252.2.0/24
+```
+
+Example _DMZ Subnet_ configuration:
+
+```
+10.252.2.0/24
+```
