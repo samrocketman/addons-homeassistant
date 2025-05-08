@@ -5,10 +5,10 @@ set -euo pipefail
 
 bashio::log.info 'Starting wg0.conf monitor...'
 
-dmz_subnets=$(bashio::config 'dmz_subnets' || echo '')
-export dmz_subnets
-if [ "${dmz_subnets:-}" = null ]; then
-  unset dmz_subnets
+dmz_subnet=$(bashio::config 'dmz_subnets' || echo '')
+export dmz_subnet
+if [ "${dmz_subnet:-}" = null ]; then
+  unset dmz_subnet
 fi
 
 default_nic="$(ip route | grep default | awk '{print $5}')"
@@ -38,8 +38,8 @@ clear_dmz_rules() (
   iptables-save | grep -F -- '-A OUTPUT' | grep -F -- '-j WG_DMZ' | sed 's/-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables {}'
 )
 add_dmz_rules() {
-  if [ -z "${dmz_subnets:-}" ]; then return; fi
-  echo "$dmz_subnets" | xargs -n1 | xargs -I{} -- iptables -I OUTPUT -s {} -j WG_DMZ
+  if [ -z "${dmz_subnet:-}" ]; then return; fi
+  echo "$dmz_subnet" | xargs -n1 | xargs -I{} -- iptables -I OUTPUT -s {} -j WG_DMZ
 }
 clear_nats() (
   if ! iptables-save | grep -F -- '-j MASQUERADE'; then
@@ -59,7 +59,7 @@ refresh_wireguard() (
   clear_dmz_rules
   add_dmz_rules
   nat_ip_ranges
-  if [ -n "${dmz_subnets:-}" ]; then
+  if [ -n "${dmz_subnet:-}" ]; then
     iptables -nL
   fi
 )

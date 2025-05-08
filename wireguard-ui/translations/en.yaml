@@ -28,11 +28,10 @@ configuration:
       The list of address subdivision ranges. Format: `SR Name:10.0.1.0/24;
       SR2:10.0.2.0/24,10.0.3.0/24`.  Each CIDR must be inside one of the server
       interfaces.
-  dmz_subnets:
-    name: DMZ Subnets
+  dmz_subnet:
+    name: DMZ Subnet
     description: >-
-      One or more space-speparated CIDRs.  Wireguard subnets which are
-      considered demilitarized zones.  Hosts may only access the internet and
-      not local networks.
+      A Wireguard CIDR network considered a demilitarized zone.  Hosts may only
+      access the internet and not local networks.
 network:
   51820/udp: WireGuard Server Port.  This must match the WireGuard UI setting.
