@@ -33,5 +33,10 @@ configuration:
     description: >-
       A Wireguard CIDR network considered a demilitarized zone.  Hosts may only
       access the internet and not local networks.
+  default_interface_addresses:
+    name: Default Interface Addresses
+    description: >-
+      Initial WireGuard interface addresses.  This field only affects first
+      time setup.
 network:
   51820/udp: WireGuard Server Port.  This must match the WireGuard UI setting.
