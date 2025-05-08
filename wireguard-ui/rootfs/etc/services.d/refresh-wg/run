@@ -36,10 +36,12 @@ iface_addr() { awk '$1 == "[Interface]" {iface=1; next}; iface == 1 && $1 == "Ad
 clear_dmz_rules() (
   set +o pipefail
   iptables-save | grep -F -- '-A OUTPUT' | grep -F -- '-j WG_DMZ' | sed 's/-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables {}'
+  iptables-save | grep -F -- '-A FORWARD' | grep -F -- '-j WG_DMZ' | sed 's/-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables {}'
 )
 add_dmz_rules() {
   if [ -z "${dmz_subnet:-}" ]; then return; fi
   echo "$dmz_subnet" | xargs -n1 | xargs -I{} -- iptables -I OUTPUT -s {} -j WG_DMZ
+  echo "$dmz_subnet" | xargs -n1 | xargs -I{} -- iptables -I FORWARD -s {} -j WG_DMZ
 }
 clear_nats() (
   if ! iptables-save | grep -F -- '-j MASQUERADE'; then
