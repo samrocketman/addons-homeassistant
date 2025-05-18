@@ -24,8 +24,8 @@ endpoint=$(bashio::config 'default_client_endpoint' || echo '')
 port=$(bashio::addon.port '51820/udp' || echo '')
 single_user=$(bashio::config 'single_user_mode' || echo '')
 user_loglevel=$(bashio::config 'log_level' || echo '')
-subnet_ranges=$(bashio::config 'subnet_ranges' || echo '')
-default_interface_addresses=$(bashio::config 'default_interface_addresses' || echo '')
+subnet_ranges=$(bashio::config 'subnet_ranges | join("; ")' || echo '')
+default_interface_addresses="$(bashio::config 'default_interface_addresses | join(",")' || echo '')"
 
 # settings directly passed to WireGuard UI without additional validation
 EMAIL_FROM_ADDRESS=$(bashio::config 'email_from_address' || echo '')

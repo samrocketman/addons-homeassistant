@@ -13,17 +13,32 @@ sys.exit(0) if pattern.match(sys.stdin.read()) else sys.exit(1)
 value_is_string() {
   [ "$(yq "${1}"' | type == "!!str"' config.yaml)" = true ]
 }
+value_is_sequence() {
+  [ "$(yq "${1}"' | type == "!!seq"' config.yaml)" = true ]
+}
 get_value() {
   yq "${1}" config.yaml
 }
+get_seq_values() {
+  yq "${1}"' | .[]' config.yaml
+}
 result=0
-while read var; do
+while read -r var; do
   schema_var='.schema."'"${var}"'"'
   if value_is_string "${schema_var}"; then
     if ! get_value "${schema_var}" | validate_schema_value; then
       echo "ERROR: ${schema_var} contains invalid value." >&2
       result=1
     fi
+  elif value_is_sequence "${schema_var}"; then
+    iteration=0
+    while read -r item; do
+      if ! validate_schema_value <<< "${item}"; then
+        echo "ERROR: ${schema_var}[${iteration}] contains invalid value." >&2
+        result=1
+      fi
+      iteration="$((iteration + 1))"
+    done <<< "$(get_seq_values "${schema_var}")"
   else
     echo "ERROR: type not supported in ${schema_var}" >&2
     result=1
