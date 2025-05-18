@@ -1,4 +1,6 @@
-.PHONY: check goss
+.PHONY: check goss test schema
+
+test: check goss schema
 
 check:
 	  docker build --build-arg BUILD_FROM="$$(yq '.build_from.amd64' build.yaml)" -t hassio_wg .
@@ -6,7 +8,10 @@ check:
 	  docker run --rm --entrypoint '' hassio_wg /bin/bash -c "sed -i 's/%%interface%%/127.0.0.1/' /etc/nginx/servers/ingress.conf; nginx -t"
 
 goss:
-	docker run -v "$(PWD):/mnt" -w /mnt -v "$(HOME)/usr/bin/goss":/goss --rm --entrypoint '' hassio_wg /goss validate
+	docker run -v "$(PWD):/mnt" -w /mnt -v "$(HOME)/usr/bin/goss":/goss --rm --entrypoint '' hassio_wg /goss -g tests/goss.yaml validate
+
+schema:
+	./tests/validate-schema.sh
 
 serve:
 	mkdir -p /tmp/data
