@@ -1,6 +1,6 @@
 ---
 name: Wireguard UI
-version: 1.1.118
+version: 1.1.119
 url: https://github.com/samrocketman/addons-homeassistant/tree/main/wireguard-ui
 slug: wireguard-ui
 description: >-
@@ -22,8 +22,8 @@ options:
     - "10.252.1.0/24"
     - "10.252.2.0/24"
   subnet_ranges:
-    - "Home:10.252.1.0/24"
-    - "DMZ Network:10.252.2.0/24"
+    - "Home: 10.252.1.0/24"
+    - "DMZ Network: 10.252.2.0/24"
   dmz_subnet:
     - "10.252.2.0/24"
 # https://developers.home-assistant.io/docs/add-ons/configuration/#options--schema
