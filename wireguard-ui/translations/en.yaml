@@ -38,53 +38,5 @@ configuration:
     description: >-
       Initial WireGuard interface addresses.  This field only affects first
       time setup.
-  email_from_address:
-    name: Email FROM Address
-    description: >-
-      The sender email address when sending an email.
-  email_from_name:
-    name: Email sender name
-    description: >-
-      The sender name when sending an email.
-      Default: `WireGuard UI`.
-  sendgrid_api_key:
-    name: SendGrid API Key
-    description: >-
-      Send WireGuard emails via SendGrid API instead of defining SMTP settings.
-  smtp_hostname:
-    name: SMTP host name
-    description: >-
-      SMTP host to send emails.
-  smtp_port:
-    name: SMTP port
-    description: >-
-      SMTP port for sending emails.
-      Default: `25`.
-  smtp_username:
-    name: SMTP username
-    description: >-
-      SMTP username for authenticating to send emails.
-  smtp_password:
-    name: SMTP password
-    description: >-
-      SMTP password for authenticating to send emails.
-  smtp_auth_type:
-    name: SMTP auth type
-    description: >-
-      The SMTP authentication type.
-      Default: `NONE`.
-  smtp_encryption:
-    name: SMTP encryption
-    description: >-
-      Dictates connection security negotiation with SMTP server.
-      SMTP authentication security type.  This dictates how authentication is
-      negotiated with the SMTP server.
-      Default: `STARTTLS`.
-  smtp_helo:
-    name: SMTP HELO
-    description: >-
-      Hostname to use for the HELO message.  `smtp-relay.gmail.com` needs this
-      set to anything but `localhost`.  Value limited to RFC2181.
-      Default: `localhost`.
 network:
   51820/udp: WireGuard Server Port.  This must match the WireGuard UI setting.
