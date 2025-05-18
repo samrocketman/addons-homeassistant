@@ -1,6 +1,6 @@
 ---
 name: Wireguard UI
-version: 1.1.113
+version: 1.1.114
 url: https://github.com/samrocketman/addons-homeassistant/tree/main/wireguard-ui
 slug: wireguard-ui
 description: >-
@@ -30,5 +30,18 @@ schema:
   default_client_dns: str?
   default_client_endpoint: str?
   log_level: list(debug|info|warn|error|off)?
+  email_from_address: str?
+  email_from_name: str?
+  sendgrid_api_key: password?
+  smtp_hostname: match(^([-a-zA-Z0-9.]{0,253}|[0-9a-f:.]*)$)?
+  smtp_port: int(0, 65535)?
+  smtp_username: str?
+  smtp_password: password?
+  smtp_auth_type: list(PLAIN|LOGIN|NONE)?
+  smtp_encryption: list(NONE|SSL|SSLTLS|TLS|STARTTLS)?
+  smtp_helo: match(^([-a-zA-Z0-9.]{0,253}|[0-9a-f:.]*)$)?
+  telegram_token: password?
+  telegram_allow_conf_request: bool?
+  telegram_flood_wait: int(0,)?
 ports:
   51820/udp: 51820
