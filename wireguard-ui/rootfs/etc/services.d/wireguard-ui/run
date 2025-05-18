@@ -27,6 +27,21 @@ user_loglevel=$(bashio::config 'log_level' || echo '')
 subnet_ranges=$(bashio::config 'subnet_ranges' || echo '')
 default_interface_addresses=$(bashio::config 'default_interface_addresses' || echo '')
 
+# settings directly passed to WireGuard UI without additional validation
+EMAIL_FROM_ADDRESS=$(bashio::config 'email_from_address' || echo '')
+EMAIL_FROM_NAME=$(bashio::config 'email_from_name' || echo '')
+SENDGRID_API_KEY=$(bashio::config 'sendgrid_api_key' || echo '')
+SMTP_HOSTNAME=$(bashio::config 'smtp_hostname' || echo '')
+SMTP_PORT=$(bashio::config 'smtp_port' || echo '')
+SMTP_USERNAME=$(bashio::config 'smtp_username' || echo '')
+SMTP_PASSWORD=$(bashio::config 'smtp_password' || echo '')
+SMTP_AUTH_TYPE=$(bashio::config 'smtp_auth_type' || echo '')
+SMTP_ENCRYPTION=$(bashio::config 'smtp_encryption' || echo '')
+SMTP_HELO=$(bashio::config 'smtp_helo' || echo '')
+TELEGRAM_TOKEN=$(bashio::config 'telegram_token' || echo '')
+TELEGRAM_ALLOW_CONF_REQUEST=$(bashio::config 'telegram_allow_conf_request' || echo '')
+TELEGRAM_FLOOD_WAIT=$(bashio::config 'telegram_flood_wait' || echo '')
+
 # wireguard-ui will SHA512 checksum the contents of the random password and use
 # that as the password to encrypt sessions.
 random_password() (
@@ -79,6 +94,12 @@ WGUI_SERVER_LISTEN_PORT="${port%/*}"
 export SUBNET_RANGES WGUI_DEFAULT_CLIENT_ALLOWED_IPS WGUI_DNS
 export WGUI_ENDPOINT_ADDRESS WGUI_LOG_LEVEL WGUI_MTU WGUI_PERSISTENT_KEEPALIVE
 export WGUI_SERVER_INTERFACE_ADDRESSES WGUI_SERVER_LISTEN_PORT
+
+# contact settings set from home assistant config
+export EMAIL_FROM_ADDRESS EMAIL_FROM_NAME SENDGRID_API_KEY SMTP_AUTH_TYPE
+export SMTP_ENCRYPTION SMTP_HELO SMTP_HOSTNAME SMTP_PASSWORD SMTP_PORT
+export SMTP_USERNAME TELEGRAM_ALLOW_CONF_REQUEST TELEGRAM_FLOOD_WAIT
+export TELEGRAM_TOKEN
 if [ -f /applied_patches ]; then
   cat /applied_patches
 fi
