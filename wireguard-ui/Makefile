@@ -11,6 +11,7 @@ goss:
 	docker run -v "$(PWD):/mnt" -w /mnt -v "$(HOME)/usr/bin/goss":/goss --rm --entrypoint '' hassio_wg /goss -g tests/goss.yaml validate
 
 schema:
+	yq -P . config.yaml > /dev/null
 	./tests/validate-schema.sh
 
 serve:

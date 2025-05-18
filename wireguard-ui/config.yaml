@@ -1,6 +1,6 @@
 ---
 name: Wireguard UI
-version: 1.1.117
+version: 1.1.118
 url: https://github.com/samrocketman/addons-homeassistant/tree/main/wireguard-ui
 slug: wireguard-ui
 description: >-
@@ -30,12 +30,12 @@ options:
 schema:
   single_user_mode: bool
   default_interface_addresses:
-    - "match(^([ ,/0-9.]+)?$)?"
+    - "match(^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]+$)?"
   clear_session_on_boot: bool?
   subnet_ranges:
-    - "match(^(;? ?[^:]+:[/0-9.,]+)*$)?"
+    - "match(^[^:]+: ?([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]+$)?"
   dmz_subnet:
-    - "match(^([ /0-9.]+)?$)?"
+    - "match(^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]+$)?"
   default_client_dns: str?
   default_client_endpoint: str?
   log_level: list(debug|info|warn|error|off)?
