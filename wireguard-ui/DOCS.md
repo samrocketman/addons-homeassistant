@@ -92,3 +92,87 @@ Example _DMZ Subnet_ configuration:
 ```
 10.252.2.0/24
 ```
+
+## DMZ allowances
+
+**Be aware that by adding DMZ allowances** you impact the restrictions of the
+DMZ and in some configurations can make your DMZ inert.  Meaning it **no longer
+effectively functions as a DMZ**.  This original intent of this feature is for a
+DMZ network capable of connecting to Home Assistant without being able to
+connect to other RFC1918 private IP addresses.
+
+Allowances translate into a set of firewall rules. Rules which allow DMZ
+connected VPN hosts to connect tRFC1918 private IP space.  For example, allowing
+DMZ connected hosts to use Home Assistant DNS (includes AdGuard integration).
+
+The default rules allow Home Assistant DNS.
+
+```yaml
+- default_route_ip|53/udp
+```
+
+`default_route_ip` automatically translates into an Home Assistant internal
+add-on IP address for its default gateway.  Other than `default_route_ip` there
+are no special key words.
+
+### DMZ allowance rule format
+
+Generic format: There's at least five ways you can format an allowance rule.
+
+```yaml
+- dst_net
+- port/proto
+- dst_net|port/proto
+- src_net||port/proto
+- src_net|dst_net|port/proto
+```
+
+Definitions:
+
+- `dst_net` - destination network CIDR or an IP address.
+- `src_net` - source network CIDR or an IP address.  **Note:** If `src_net` is
+  not declared, then the rule applies to all DMZ subnets.
+- `port` - the destination port of the connection.
+- `proto` - The protocol of the connection.  Only `tcp`, `udp`, or `icmp` is
+  allowed.  If value is `any`, then the iptables rule will not include a
+  protocol.
+
+The following are examples of how rules translate into iptables commands.  This
+is more for advanced users to understand how these rules work.
+
+`dst_net` only example (IP as a CIDR).
+
+```yaml
+Rule: 172.30.32.1/31
+Command: iptables -A WG_DMZ_allow -d 172.30.32.1/31 -j ACCEPT
+```
+
+`port/proto` only example.
+
+```yaml
+Rule: 53/udp
+Command: iptables -A WG_DMZ_allow -p udp -m udp --dport 53 -j ACCEPT
+```
+
+`dst_net|port/proto` example.
+
+```yaml
+Rule: 172.30.32.1/31|53/udp
+Command: iptables -A WG_DMZ_allow -d 172.30.32.1/31 -p udp -m udp --dport 53 -j ACCEPT
+```
+
+`src_net|dst_net|port/proto` which allows a specific WireGuard IP to connect to
+a TLS host in RFC1918 private IP space.
+
+```yaml
+Rule: 10.252.2.1|192.168.0.2|443/tcp
+Command: iptables -A WG_DMZ_allow -s 10.252.2.0/24 -d 192.168.0.2 -p tcp -m tcp --dport 443 -j ACCEPT
+```
+
+`port` can also be a multiport value.  It should follow the multiport iptables
+module syntax of `--dports port[,port|,port:port]...`.
+
+```yaml
+Rule: 53,30000:32000/udp
+Command: iptables -A WG_DMZ_allow -p udp -m multiport --dports 53,30000:32000 -j ACCEPT
+```

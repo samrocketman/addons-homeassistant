@@ -33,6 +33,12 @@ configuration:
     description: >-
       A Wireguard CIDR network considered a demilitarized zone.  Hosts may only
       access the internet and not local networks.
+  dmz_subnet_allow:
+    name: DMZ allowances
+    description: >-
+      These are a set of rules which can allow specific communications to
+      internal networks allowed from the DMZ.  See Documentation tab for
+      details.
   default_interface_addresses:
     name: Default Interface Addresses
     description: >-

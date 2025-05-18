@@ -59,7 +59,7 @@ random_password() (
 # Run wireguard-ui
 # wireguard-ui creates databases in `./db`
 # /data is a persistent path in the container
-cd /data
+cd /data || exit 1
 # missing state dir causes login loops
 [ -d db ] || mkdir db
 if [ "${clear_session_on_boot:-}" = true ]; then

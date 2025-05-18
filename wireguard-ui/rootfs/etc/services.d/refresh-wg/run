@@ -6,7 +6,9 @@ set -euo pipefail
 bashio::log.info 'Starting wg0.conf monitor...'
 
 dmz_subnet="$(bashio::config 'dmz_subnet | join(" ")' || echo '')"
-export dmz_subnet
+dmz_subnet_allow="$(bashio::config 'dmz_subnet_allow | join(" ")' || echo '')"
+dmz_exclusion_separator='|'
+export dmz_subnet dmz_exclusion_separator
 if [ "${dmz_subnet:-}" = null ]; then
   unset dmz_subnet
 fi
@@ -14,22 +16,6 @@ fi
 default_nic="$(ip route | grep default | awk '{print $5}')"
 default_route_ip="$(ip route | awk '$1 == "default" { print $3 }')"
 export default_nic default_route_ip
-
-check_or_add_rule() (
-  case "$1" in
-    -I|-A)
-      add_args=( "$@" )
-      shift
-      check_args=( "$@" )
-      ;;
-    *)
-      add_args=( -A "$@" )
-      check_args=( "$@" )
-      ;;
-  esac
-  set -x
-  iptables -C "${check_args[@]}" &> /dev/null || iptables "${add_args[@]}"
-)
 
 # daemon restarts wg interface on modification
 iface_addr() { awk '$1 == "[Interface]" {iface=1; next}; iface == 1 && $1 == "Address" {print $3; exit}' /etc/wireguard/wg0.conf | tr ',' '\n'; }
@@ -42,6 +28,9 @@ add_dmz_rules() {
   if [ -z "${dmz_subnet:-}" ]; then return; fi
   echo "$dmz_subnet" | xargs -n1 | xargs -I{} -- iptables -I OUTPUT -s {} -j WG_DMZ
   echo "$dmz_subnet" | xargs -n1 | xargs -I{} -- iptables -I FORWARD -s {} -j WG_DMZ
+  while read -r dmz_allow_rule; do
+    apply_dmz_allow_rule "$dmz_allow_rule"
+  done <<< "$(xargs -n1 <<< "${dmz_subnet_allow}")"
 }
 clear_nats() (
   if ! iptables-save | grep -F -- '-j MASQUERADE'; then
@@ -51,8 +40,7 @@ clear_nats() (
   iptables-save | grep -F -- '-j MASQUERADE' | sed 's/^-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables -t nat {}'
 )
 nat_ip_ranges() { iface_addr | xargs -I {} iptables -t nat -A POSTROUTING -s '{}' -o "${default_nic}" -j MASQUERADE; }
-refresh_wireguard() (
-  set -x
+refresh_wireguard() {
   if ip link show wg0; then
     wg-quick down wg0
   fi
@@ -64,20 +52,130 @@ refresh_wireguard() (
   if [ -n "${dmz_subnet:-}" ]; then
     iptables -nL
   fi
+}
+# DMZ exclusion functions
+get_src_net() {
+  case "$(count_sep "$1")" in
+    0)
+      return
+      ;;
+    1)
+      if ! grep '|$' > /dev/null <<< "$1"; then
+        return
+      fi
+      ;;
+  esac
+  cut -d'|' -f1 <<< "$1"
+}
+get_dst_net() {
+  case "$(count_sep "$1")" in
+    0)
+      if grep '^[.0-9/]*$' > /dev/null <<< "$1"; then
+        echo "$1"
+      fi
+      ;;
+    1)
+      if grep '|$' > /dev/null <<< "$1"; then
+        return
+      fi
+      cut -d'|' -f1 <<< "$1"
+      ;;
+    2)
+      cut -d'|' -f2 <<< "$1"
+      ;;
+  esac
+}
+get_port_field() {
+  local port
+  case "$(count_sep "$1")" in
+    0)
+      if ! grep '^[:,0-9]*/[a-z]*$' > /dev/null <<< "$1"; then
+        return
+      fi
+      port="$1"
+      ;;
+    1)
+      port="$(cut -d'|' -f2 <<< "$1")"
+      ;;
+    2)
+      port="$(cut -d'|' -f3 <<< "$1")"
+      ;;
+  esac
+  echo "$port"
+}
+get_dst_port() {
+  local port
+  port="$(get_port_field "$1")"
+  echo "${port%/*}"
+}
+get_dst_proto() {
+  local port
+  port="$(get_port_field "$1")"
+  echo "${port#*/}"
+}
+count_sep() {
+  echo "$1" | grep -o "${dmz_exclusion_separator}" | tr -d '\n' | wc -c
+}
+add_dmz_exclusion_to_iptables() (
+  iptables_args=( iptables -A WG_DMZ_allow )
+  if [ -n "${src_net:-}" ]; then
+    iptables_args+=( -s "${src_net}" )
+  fi
+  if [ -n "${dst_net:-}" ]; then
+    iptables_args+=( -d "${dst_net}" )
+  fi
+  if [ -n "${dst_port:-}" ] && [ -n "${dst_proto:-}" ]; then
+    case "${dst_proto}" in
+      tcp|udp|icmp)
+        iptables_args+=( -p "${dst_proto}" )
+        ;;
+    esac
+    if grep '^[0-9]*$' > /dev/null <<< "$dst_port"; then
+      iptables_args+=( -m "${dst_proto}" --dport "${dst_port}" )
+    else
+      iptables_args+=( -m multiport --dports "${dst_port}" )
+    fi
+  fi
+  iptables_args+=( -j ACCEPT )
+  set -x
+  "${iptables_args[@]}"
 )
+apply_dmz_allow_rule() (
+  src_net="$(get_src_net "$1")"
+  dst_net="$(get_dst_net "$1")"
+  dst_port="$(get_dst_port "$1")"
+  dst_proto="$(get_dst_proto "$1")"
+  export src_net dst_net dst_port dst_proto
+  if [ "${src_net:-}" = default_route_ip ]; then
+    src_net="${default_route_ip}"
+  fi
+  if [ "${dst_net:-}" = default_route_ip ]; then
+    dst_net="${default_route_ip}"
+  fi
+  if [ -n "${src_net:-}" ]; then
+    add_dmz_exclusion_to_iptables
+  else
+    while read -r all_dmz_nets; do
+      src_net="$all_dmz_nets" add_dmz_exclusion_to_iptables
+    done <<< "$(xargs -n1 <<< "${dmz_subnet}")"
+  fi
+)
+# END DMZ exclusion functions
 trap 'rm -f /tmp/wg_started' EXIT
 #
 # Create wireguard DMZ
 #
-iptables -L WG_DMZ &> /dev/null || iptables --new WG_DMZ
+iptables --new WG_DMZ
+iptables --new WG_DMZ_allow
 # allow DNS requests in DMZ
-check_or_add_rule -I WG_DMZ -d "${default_route_ip}" -p udp -m udp --dport 53 -j RETURN
-check_or_add_rule -I WG_DMZ -d "${default_route_ip}" -p tcp -m tcp --dport 53 -j RETURN
+iptables -I WG_DMZ -j WG_DMZ_allow
+iptables -I WG_DMZ -d "${default_route_ip}" -p udp -m udp --dport 53 -j RETURN
+iptables -I WG_DMZ -d "${default_route_ip}" -p tcp -m tcp --dport 53 -j RETURN
 # rfc1918 private IP spaces
-check_or_add_rule WG_DMZ -d 10.0.0.0/8 -j REJECT --reject-with icmp-host-prohibited
-check_or_add_rule WG_DMZ -d 172.16.0.0/12 -j REJECT --reject-with icmp-host-prohibited
-check_or_add_rule WG_DMZ -d 192.168.0.0/16 -j REJECT --reject-with icmp-host-prohibited
-check_or_add_rule WG_DMZ -j RETURN
+iptables -A WG_DMZ -d 10.0.0.0/8 -j REJECT --reject-with icmp-host-prohibited
+iptables -A WG_DMZ -d 172.16.0.0/12 -j REJECT --reject-with icmp-host-prohibited
+iptables -A WG_DMZ -d 192.168.0.0/16 -j REJECT --reject-with icmp-host-prohibited
+iptables -A WG_DMZ -j RETURN
 #
 # Watch for changes
 #

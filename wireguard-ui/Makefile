@@ -1,6 +1,6 @@
-.PHONY: check goss test schema
+.PHONY: check goss test schema shellcheck
 
-test: check goss schema
+test: check goss shellcheck schema
 
 check:
 	  docker build --build-arg BUILD_FROM="$$(yq '.build_from.amd64' build.yaml)" -t hassio_wg .
@@ -13,6 +13,11 @@ goss:
 schema:
 	yq -P . config.yaml > /dev/null
 	./tests/validate-schema.sh
+
+shellcheck:
+	shellcheck -e SC1008 rootfs/etc/services.d/refresh-wg/run
+	shellcheck -e SC1008 rootfs/etc/services.d/nginx/run
+	shellcheck -e SC1008 rootfs/etc/services.d/wireguard-ui/run
 
 serve:
 	mkdir -p /tmp/data
