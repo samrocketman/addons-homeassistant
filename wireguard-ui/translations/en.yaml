@@ -86,5 +86,18 @@ configuration:
       Hostname to use for the HELO message.  `smtp-relay.gmail.com` needs this
       set to anything but `localhost`.  Value limited to RFC2181.
       Default: `localhost`.
+  telegram_token:
+    name: Telegram Token
+    description: >-
+      Telegram bot token for distributing configs to clients.
+  telegram_allow_conf_request:
+    name: Allow conf request from Telegram
+    description: >-
+      Allow users to get configs from the bot by sending a message.
+  telegram_flood_wait:
+    name: Telegram Flood Wait
+    description: >-
+      Time in minutes before the next conf request is processed.
+      Default: `60`.
 network:
   51820/udp: WireGuard Server Port.  This must match the WireGuard UI setting.
