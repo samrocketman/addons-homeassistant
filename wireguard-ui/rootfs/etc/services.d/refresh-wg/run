@@ -5,7 +5,7 @@ set -euo pipefail
 
 bashio::log.info 'Starting wg0.conf monitor...'
 
-dmz_subnet=$(bashio::config 'dmz_subnet' || echo '')
+dmz_subnet="$(bashio::config 'dmz_subnet | join(" ")' || echo '')"
 export dmz_subnet
 if [ "${dmz_subnet:-}" = null ]; then
   unset dmz_subnet
