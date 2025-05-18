@@ -169,8 +169,6 @@ iptables --new WG_DMZ
 iptables --new WG_DMZ_allow
 # allow DNS requests in DMZ
 iptables -I WG_DMZ -j WG_DMZ_allow
-iptables -I WG_DMZ -d "${default_route_ip}" -p udp -m udp --dport 53 -j RETURN
-iptables -I WG_DMZ -d "${default_route_ip}" -p tcp -m tcp --dport 53 -j RETURN
 # rfc1918 private IP spaces
 iptables -A WG_DMZ -d 10.0.0.0/8 -j REJECT --reject-with icmp-host-prohibited
 iptables -A WG_DMZ -d 172.16.0.0/12 -j REJECT --reject-with icmp-host-prohibited
