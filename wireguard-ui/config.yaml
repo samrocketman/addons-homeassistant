@@ -1,6 +1,6 @@
 ---
 name: Wireguard UI
-version: 1.1.117
+version: 1.1.116
 url: https://github.com/samrocketman/addons-homeassistant/tree/main/wireguard-ui
 slug: wireguard-ui
 description: >-
@@ -18,24 +18,15 @@ panel_icon: mdi:vpn
 panel_title: WireGuard VPN
 options:
   single_user_mode: true
-  default_interface_addresses:
-    - "10.252.1.0/24"
-    - "10.252.2.0/24"
-  subnet_ranges:
-    - "Home:10.252.1.0/24"
-    - "DMZ Network:10.252.2.0/24"
-  dmz_subnet:
-    - "10.252.2.0/24"
+  default_interface_addresses: "10.252.1.0/24,10.252.2.0/24"
+  dmz_subnet: "10.252.2.0/24"
 # https://developers.home-assistant.io/docs/add-ons/configuration/#options--schema
 schema:
   single_user_mode: bool
-  default_interface_addresses:
-    - "match(^([ ,/0-9.]+)?$)?"
+  default_interface_addresses: "match(^([ ,/0-9.]+)?$)?"
   clear_session_on_boot: bool?
-  subnet_ranges:
-    - "match(^(;? ?[^:]+:[/0-9.,]+)*$)?"
-  dmz_subnet:
-    - "match(^([ /0-9.]+)?$)?"
+  subnet_ranges: "match(^(;? ?[^:]+:[/0-9.,]+)*$)?"
+  dmz_subnet: "match(^([ /0-9.]+)?$)?"
   default_client_dns: str?
   default_client_endpoint: str?
   log_level: list(debug|info|warn|error|off)?
