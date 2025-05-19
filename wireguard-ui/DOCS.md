@@ -110,18 +110,19 @@ The default rules allow Home Assistant DNS.
 - default_route_ip|53/udp
 ```
 
-`default_route_ip` automatically translates into an Home Assistant internal
-add-on IP address for its default gateway.  Other than `default_route_ip` there
-are no special key words.
+`default_route_ip` automatically translates into the internal add-on default
+gateway.  Other than `default_route_ip` there are no special key words.  Home
+Assistant is accessible via the default gateway IP.
 
 ### DMZ allowance rule format
 
-Generic format: There's at least five ways you can format an allowance rule.
+Generic format: There's six ways you can format an allowance rule.
 
 ```yaml
 - dst_net
 - port/proto
 - dst_net|port/proto
+- src_net|
 - src_net||port/proto
 - src_net|dst_net|port/proto
 ```
