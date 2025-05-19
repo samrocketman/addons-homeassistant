@@ -61,15 +61,13 @@ The format is very specific:
 For example, the following is defining multiple subnet ranges.
 
 ```
-Home:10.252.1.0/24; Office Space:10.38.14.0/16,10.39.1.0/24
+- Home: 10.252.1.0/24
+- Office Space: 10.38.14.0/16,10.39.1.0/24
 ```
 
-Note:
+## DMZ Subnets
 
-* After `:` there's no spaces.
-* Multiple CIDRs are comma separated.  Such as those in `Office Space`.
-
-## DMZ Subnet
+A default DMZ network is defined.  It is optional and can be removed.
 
 DMZ or Demilitarized Zone in networking strictly grants only internet access
 through the VPN.  Useful to allow friends or family to route through your VPN
@@ -84,7 +82,8 @@ To configure a Wireguard DMZ Subnet:
 Example _Subnet Ranges_ configuration:
 
 ```
-Home:10.252.1.0/24; DMZ Network:10.252.2.0/24
+- Home: 10.252.1.0/24
+- DMZ Network: 10.252.2.0/24
 ```
 
 Example _DMZ Subnet_ configuration:
@@ -99,10 +98,10 @@ Example _DMZ Subnet_ configuration:
 DMZ and in some configurations can make your DMZ inert.  Meaning it **no longer
 effectively functions as a DMZ**.  The original intent of this feature is for a
 DMZ network capable of connecting to Home Assistant services without being able
-to other other RFC1918 private IP addresses.
+to reach other RFC1918 private IP addresses.
 
 Allowances translate into a set of firewall rules. Rules which allow DMZ
-connected VPN hosts to connect tRFC1918 private IP space.  For example, allowing
+connected VPN hosts to connect to RFC1918 private IP space.  For example, allowing
 DMZ connected hosts to use Home Assistant DNS (includes AdGuard integration).
 
 The default rules allow Home Assistant DNS.
@@ -138,13 +137,15 @@ Definitions:
   protocol.
 
 The following are examples of how rules translate into iptables commands.  This
-is more for advanced users to understand how these rules work.
+is more for advanced users to understand how these rules work.  None of these
+examples are recommended.  They are just showcasing the DMZ Allowance Rule
+format.
 
 `dst_net` only example (IP as a CIDR).
 
 ```yaml
-Rule: 172.30.32.1/31
-Command: iptables -A WG_DMZ_allow -d 172.30.32.1/31 -j ACCEPT
+Rule: 172.30.32.1/32
+Command: iptables -A WG_DMZ_allow -d 172.30.32.1/32 -j ACCEPT
 ```
 
 `port/proto` only example.
