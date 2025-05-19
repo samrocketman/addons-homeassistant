@@ -23,6 +23,7 @@ clear_dmz_rules() (
   set +o pipefail
   iptables-save | grep -F -- '-A OUTPUT' | grep -F -- '-j WG_DMZ' | sed 's/-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables {}'
   iptables-save | grep -F -- '-A FORWARD' | grep -F -- '-j WG_DMZ' | sed 's/-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables {}'
+  iptables-save | grep -F -- '-A WG_DMZ_allow' | sed 's/-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables {}'
 )
 add_dmz_rules() {
   if [ -z "${dmz_subnet:-}" ]; then return; fi
