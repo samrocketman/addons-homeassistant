@@ -29,12 +29,12 @@ configuration:
       SR2:10.0.2.0/24,10.0.3.0/24`.  Each CIDR must be inside one of the server
       interfaces.
   dmz_subnet:
-    name: DMZ Subnet
+    name: DMZ Subnets
     description: >-
       A Wireguard CIDR network considered a demilitarized zone.  Hosts may only
       access the internet and not local networks.
   dmz_subnet_allow:
-    name: DMZ allowances
+    name: DMZ Allowances
     description: >-
       These are a set of rules which can allow specific communications to
       internal networks allowed from the DMZ.  See Documentation tab for

@@ -97,9 +97,9 @@ Example _DMZ Subnet_ configuration:
 
 **Be aware that by adding DMZ allowances** you impact the restrictions of the
 DMZ and in some configurations can make your DMZ inert.  Meaning it **no longer
-effectively functions as a DMZ**.  This original intent of this feature is for a
-DMZ network capable of connecting to Home Assistant without being able to
-connect to other RFC1918 private IP addresses.
+effectively functions as a DMZ**.  The original intent of this feature is for a
+DMZ network capable of connecting to Home Assistant services without being able
+to other other RFC1918 private IP addresses.
 
 Allowances translate into a set of firewall rules. Rules which allow DMZ
 connected VPN hosts to connect tRFC1918 private IP space.  For example, allowing
