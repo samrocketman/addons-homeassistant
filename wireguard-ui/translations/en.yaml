@@ -32,7 +32,8 @@ configuration:
     name: DMZ Subnets
     description: >-
       A Wireguard CIDR network considered a demilitarized zone.  Hosts may only
-      access the internet and not local networks.
+      access the internet and not local networks.  Exceptions to restricted
+      access can be created from DMZ Allowances.
   dmz_subnet_allow:
     name: DMZ Allowances
     description: >-
