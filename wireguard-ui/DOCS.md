@@ -43,10 +43,9 @@ see fit.
 ## Subnet Ranges
 
 > Subnet ranges configuration is not available from within the web UI and
-> requires a server restart in order to apply.  Review startup logs to verify
-> WireGuard UI accepted the provided subnet ranges.
+> requires a server restart in order to apply.
 
-All subnet ranges **must fall within** _Server Interface Addresses_ found on
+All subnet ranges must fall within _Server Interface Addresses_ found on
 _Wireguard Server_ page.  A subnet range is a CIDR.
 
 This feature is intended for subdivision of large wireguard servers, such as
@@ -55,22 +54,15 @@ purposes and easier firewalling.
 
 The format is very specific:
 
-```yaml
-some name: CIDR[,CIDR][,...]
+```
+<some name>:CIDR,CIDR,CIDR
 ```
 
-By default, the following _Subnet Ranges_ are available.
+For example, the following is defining multiple subnet ranges.
 
-```yaml
-- "Home: 10.252.1.0/24"
-- "DMZ Network: 10.252.2.0/24"
 ```
-
-Multiple networks (CIDR) can be associated with a single Subnet Range.
-
-```yaml
-- "Home: 10.252.1.0/24"
-- "Office Space: 10.38.14.0/16,10.39.1.0/24"
+- Home: 10.252.1.0/24
+- Office Space: 10.38.14.0/16,10.39.1.0/24
 ```
 
 ## DMZ Subnets
@@ -81,14 +73,26 @@ DMZ or Demilitarized Zone in networking strictly grants only internet access
 through the VPN.  Useful to allow friends or family to route through your VPN
 without granting them local access.
 
-By default, the following _DMZ Subnet_ is available.
+To configure a Wireguard DMZ Subnet:
 
-```yaml
-- 10.252.2.0/24
+- Add a new network under your WireGuard server configuration.  For example,
+  `10.252.2.0/24`.
+- Configure both _Subnet Ranges_ and _DMZ Subnet_.
+
+Example _Subnet Ranges_ configuration:
+
+```
+- Home: 10.252.1.0/24
+- DMZ Network: 10.252.2.0/24
 ```
 
+Example _DMZ Subnet_ configuration:
 
-## DMZ Allowances
+```
+10.252.2.0/24
+```
+
+## DMZ allowances
 
 **Be aware that by adding DMZ allowances** you impact the restrictions of the
 DMZ and in some configurations can make your DMZ inert.  Meaning it **no longer
@@ -112,14 +116,13 @@ Assistant is accessible via the default gateway IP.
 
 ### DMZ allowance rule format
 
-Generic format: There's seven ways you can format an allowance rule.
+Generic format: There's six ways you can format an allowance rule.
 
 ```yaml
 - dst_net
 - port/proto
 - dst_net|port/proto
 - src_net|
-- src_net|dst_net
 - src_net||port/proto
 - src_net|dst_net|port/proto
 ```
@@ -139,26 +142,25 @@ is more for advanced users to understand how these rules work.  None of these
 examples are recommended.  They are just showcasing the DMZ Allowance Rule
 format.
 
-`dst_net` only example (IP as a CIDR).  Because `src_net` is not defined it will
-always default to one or more rules to cover all DMZ subnets.
+`dst_net` only example (IP as a CIDR).
 
 ```yaml
 Rule: 172.30.32.1/32
-Command: iptables -A WG_DMZ_allow -s 10.252.2.0/24 -d 172.30.32.1/32 -j ACCEPT
+Command: iptables -A WG_DMZ_allow -d 172.30.32.1/32 -j ACCEPT
 ```
 
 `port/proto` only example.
 
 ```yaml
 Rule: 53/udp
-Command: iptables -A WG_DMZ_allow -s 10.252.2.0/24 -p udp -m udp --dport 53 -j ACCEPT
+Command: iptables -A WG_DMZ_allow -p udp -m udp --dport 53 -j ACCEPT
 ```
 
 `dst_net|port/proto` example.
 
 ```yaml
 Rule: 172.30.32.1/31|53/udp
-Command: iptables -A WG_DMZ_allow -s 10.252.2.0/24 -d 172.30.32.1/31 -p udp -m udp --dport 53 -j ACCEPT
+Command: iptables -A WG_DMZ_allow -d 172.30.32.1/31 -p udp -m udp --dport 53 -j ACCEPT
 ```
 
 `src_net|dst_net|port/proto` which allows a specific WireGuard IP to connect to
@@ -166,7 +168,7 @@ a TLS host in RFC1918 private IP space.
 
 ```yaml
 Rule: 10.252.2.1|192.168.0.2|443/tcp
-Command: iptables -A WG_DMZ_allow -s 10.252.2.1 -d 192.168.0.2 -p tcp -m tcp --dport 443 -j ACCEPT
+Command: iptables -A WG_DMZ_allow -s 10.252.2.0/24 -d 192.168.0.2 -p tcp -m tcp --dport 443 -j ACCEPT
 ```
 
 `port` can also be a multiport value.  It should follow the multiport iptables
@@ -174,166 +176,5 @@ module syntax of `--dports port[,port|,port:port]...`.
 
 ```yaml
 Rule: 53,30000:32000/udp
-Command: iptables -A WG_DMZ_allow -s 10.252.2.0/24 -p udp -m multiport --dports 53,30000:32000 -j ACCEPT
-```
-
-`icmp` example.  In general, all ICMP traffic is allowed because the DMZ
-networks allow RELATED traffic (of which all ICMPv4 traffic falls under RELATED
-with exception for `ping`).  However, you can use an `icmp` rule to also grant
-ping.  The port number is ignored so always using `0` is fine.  The following
-example allows ping for home assistant IP.
-
-```yaml
-Rule: default_route_ip|0/icmp
-Command: iptables -A WG_DMZ_allow -s 10.252.2.0/24 -d 172.30.32.1 -p icmp --icmp-type echo-request -j ACCEPT
-```
-
-### Example: DMZ with HA access
-
-This example uses a mix of DMZ configuration with DMZ allowances in order to
-grant only Home Assistant access (IP and port) via the DMZ network. Any other
-LAN IP or port is still blocked for the DMZ Subnet.
-
-First, add a new network via WireGuard UI web UI.
-
-1. Visit web UI.
-2. Click _Wireguard Server_ menu.
-3. Under _Server Interface Addresses_ add a new network `10.252.3.0/24`.
-
-Next, visit Home Assistant _Settings_, _Add-ons_, _WireGuard UI_, and select
-_Configuration_ pane.  You'll need to add configurations to:
-
-- _Subnet Ranges_
-- _DMZ Subnets_
-- _DMZ Allowances_
-
-Example _Subnet Ranges_ configuration (adding on to default):
-
-```yaml
-- "Home: 10.252.1.0/24"
-- "DMZ Network: 10.252.2.0/24"
-- "DMZ with HA access: 10.252.3.0/24"
-```
-
-Example _DMZ Subnet_ configuration (adding on to default):
-
-```yaml
-- 10.252.2.0/24
-- 10.252.3.0/24
-```
-
-Example _DMZ Allowances_ configuration (adding on to default):
-
-```yaml
-- default_route_ip|53/udp
-- 10.252.3.0/24|default_route_ip|8123/tcp
-```
-
-- If you're connected via VPN, then save settings without restart.  Restart the
-  Add-on from the _Info_ pane.
-- Otherwise if you're connected directly on your LAN you can save and restart.
-
-Add a new client within `DMZ with HA access` subnet and configure WireGuard on a
-device with the new client.  By default, Home Assistant should be accessible via
-the following address.
-
-```
-http://172.30.32.1:8123
-```
-
-> **Note**: your WireGuard client should be using the Home Assistant internal IP
-> address as the DNS server.  If this differs from the provided example, then
-> use that IP instead.  e.g. `http://<wireguard_dns_ip>:8123`.
-
-## Isolated Subnets
-
-By default, no Isolated Subnets are defined.
-
-If defined, all hosts on the isolated subnet cannot connect to any other network
-and cannot connect to other hosts on the same network.  You'll need to specify
-connectivity through _Isolated Allowances_.
-
-## Isolated Allowances
-
-Similar to _DMZ Allowances_ except it applies to _Isolated Subnets_.  Refer to
-_DMZ Allowances_ section for more information about the format.
-
-### Example: Isolated with intranet
-
-In this example, we'll configure an isolated network where hosts connected to
-the isolated network can talk to each other but not allowed to connect to other
-networks (i.e. no internet or other LAN access).
-
-First, add a new network via WireGuard UI web UI.
-
-1. Visit web UI.
-2. Click _Wireguard Server_ menu.
-3. Under _Server Interface Addresses_ add a new network `10.252.4.0/24`.
-
-Next, visit Home Assistant _Settings_, _Add-ons_, _WireGuard UI_, and select
-_Configuration_ pane.  You'll need to add configurations to:
-
-- _Subnet Ranges_
-- _Isolated Subnets_
-- _Isolated Allowances_
-
-Example _Subnet Ranges_ configuration (adding on to default):
-
-```yaml
-- "Home: 10.252.1.0/24"
-- "DMZ Network: 10.252.2.0/24"
-- "Isolated with intranet: 10.252.4.0/24"
-```
-
-Example _Isolated Subnet_ configuration:
-
-```yaml
-- 10.252.4.0/24
-```
-
-Example _Isolated Allowances_ configuration:
-
-```yaml
-- 10.252.4.0/24|10.252.4.0/24
-```
-
-### Example: Isolated with HA access
-
-In this example, an isolated network will be granted access to connect to Home
-Assistant.  Hosts on this network cannot talk with each other or other networks.
-
-The use case would be IoT devices connected to a wireless network.  All traffic
-from the wireless network is encrypted and NAT through WireGuard.
-
-First, add a new network via WireGuard UI web UI.
-
-1. Visit web UI.
-2. Click _Wireguard Server_ menu.
-3. Under _Server Interface Addresses_ add a new network `10.252.5.0/24`.
-
-Next, visit Home Assistant _Settings_, _Add-ons_, _WireGuard UI_, and select
-_Configuration_ pane.  You'll need to add configurations to:
-
-- _Subnet Ranges_
-- _Isolated Subnets_
-- _Isolated Allowances_
-
-Example _Subnet Ranges_ configuration (adding on to default):
-
-```yaml
-- "Home: 10.252.1.0/24"
-- "DMZ Network: 10.252.2.0/24"
-- "Isolated with HA access: 10.252.5.0/24"
-```
-
-Example _Isolated Subnet_ configuration:
-
-```yaml
-- 10.252.5.0/24
-```
-
-Example _Isolated Allowances_ configuration:
-
-```yaml
-- 10.252.5.0/24|default_route_ip|8123/tcp
+Command: iptables -A WG_DMZ_allow -p udp -m multiport --dports 53,30000:32000 -j ACCEPT
 ```

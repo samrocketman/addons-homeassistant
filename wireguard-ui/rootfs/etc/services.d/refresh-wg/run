@@ -7,18 +7,10 @@ bashio::log.info 'Starting wg0.conf monitor...'
 
 dmz_subnet="$(bashio::config 'dmz_subnet | join(" ")' || echo '')"
 dmz_subnet_allow="$(bashio::config 'dmz_subnet_allow | join(" ")' || echo '')"
-dmz_subnet_related="$(bashio::config 'dmz_subnet_related' || echo '')"
-allowance_rule_separator='|'
-isolated_subnet="$(bashio::config 'isolated_subnet | join(" ")' || echo '')"
-isolated_subnet_allow="$(bashio::config 'isolated_subnet_allow | join(" ")' || echo '')"
-isolated_subnet_related="$(bashio::config 'isolated_subnet_related' || echo '')"
-export allowance_rule_separator dmz_subnet dmz_subnet_allow dmz_subnet_related
-export isolated_subnet isolated_subnet_allow isolated_subnet_related
+dmz_exclusion_separator='|'
+export dmz_subnet dmz_exclusion_separator
 if [ "${dmz_subnet:-}" = null ]; then
   unset dmz_subnet
-fi
-if [ "${isolated_subnet:-}" = null ]; then
-  unset isolated_subnet
 fi
 
 default_nic="$(ip route | grep default | awk '{print $5}')"
@@ -27,54 +19,19 @@ export default_nic default_route_ip
 
 # daemon restarts wg interface on modification
 iface_addr() { awk '$1 == "[Interface]" {iface=1; next}; iface == 1 && $1 == "Address" {print $3; exit}' /etc/wireguard/wg0.conf | tr ',' '\n'; }
-clear_chain_rule() {
-  case "$#" in
-    1)
-      iptables-save | \
-        grep -F -- "-A ${1}" | \
-        sed 's/-A/-D/' | \
-        tr '\n' '\0' | \
-        xargs -0 -I{} /bin/bash -c 'iptables {}'
-      ;;
-    2)
-      iptables-save | \
-        grep -F -- "-A ${1}" | \
-        grep -F -- "-j ${2}" | \
-        sed 's/-A/-D/' | \
-        tr '\n' '\0' | \
-        xargs -0 -I{} /bin/bash -c 'iptables {}'
-      ;;
-  esac
-}
-clear_subnet_chain_rules() (
+clear_dmz_rules() (
   set +o pipefail
-  clear_chain_rule OUTPUT WG_DMZ
-  clear_chain_rule FORWARD WG_DMZ
-  clear_chain_rule WG_DMZ_allow
-
-  clear_chain_rule OUTPUT WG_ISOLATED
-  clear_chain_rule FORWARD WG_ISOLATED
-  clear_chain_rule WG_ISOLATED_allow
+  iptables-save | grep -F -- '-A OUTPUT' | grep -F -- '-j WG_DMZ' | sed 's/-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables {}'
+  iptables-save | grep -F -- '-A FORWARD' | grep -F -- '-j WG_DMZ' | sed 's/-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables {}'
+  iptables-save | grep -F -- '-A WG_DMZ_allow' | sed 's/-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables {}'
 )
-add_isolated_rules() {
-  if [ -z "${isolated_subnet:-}" ]; then return; fi
-  echo "$isolated_subnet" | xargs -n1 | xargs -I{} -- iptables -I OUTPUT -s {} -j WG_DMZ
-  echo "$isolated_subnet" | xargs -n1 | xargs -I{} -- iptables -I FORWARD -s {} -j WG_DMZ
-}
-add_chain_rules() {
-  # 1 - dmz_subnet or isolated_subnet
-  # 2 - dmz_subnet_allow or isolated_subnet_allow
-  # 3 - WG_DMZ or WG_ISOLATED
-  # 4 - WG_DMZ_allow or WG_ISOLATED_allow
-  # 5 - dmz_subnet_related or isolated_subnet_related
-  echo "$1" | xargs -n1 | xargs -I{} -- iptables -I OUTPUT -s {} -j "$3"
-  echo "$1" | xargs -n1 | xargs -I{} -- iptables -I FORWARD -s {} -j "$3"
-  while read -r allow_rule; do
-    apply_allow_rule "$allow_rule" "$1" "$4"
-  done <<< "$(xargs -n1 <<< "${2:-}")"
-  if [ "${5:-}" = true ]; then
-    iptables -I "${4}" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-  fi
+add_dmz_rules() {
+  if [ -z "${dmz_subnet:-}" ]; then return; fi
+  echo "$dmz_subnet" | xargs -n1 | xargs -I{} -- iptables -I OUTPUT -s {} -j WG_DMZ
+  echo "$dmz_subnet" | xargs -n1 | xargs -I{} -- iptables -I FORWARD -s {} -j WG_DMZ
+  while read -r dmz_allow_rule; do
+    apply_dmz_allow_rule "$dmz_allow_rule"
+  done <<< "$(xargs -n1 <<< "${dmz_subnet_allow}")"
 }
 clear_nats() (
   if ! iptables-save | grep -F -- '-j MASQUERADE'; then
@@ -90,41 +47,21 @@ refresh_wireguard() {
   fi
   wg-quick up wg0
   clear_nats
-  clear_subnet_chain_rules
-  if [ -n "${dmz_subnet:-}" ]; then
-    add_chain_rules "${dmz_subnet}" "${dmz_subnet_allow:-}" WG_DMZ WG_DMZ_allow "${dmz_subnet_related:-}"
-  fi
-  if [ -n "${isolated_subnet:-}" ]; then
-    add_chain_rules "${isolated_subnet}" "${isolated_subnet_allow:-}" WG_ISOLATED WG_ISOLATED_allow "${isolated_subnet_related:-}"
-  fi
+  clear_dmz_rules
+  add_dmz_rules
   nat_ip_ranges
-  if [ -n "${dmz_subnet:-}" ] || [ -n "${isolated_subnet:-}" ]; then
+  if [ -n "${dmz_subnet:-}" ]; then
     iptables -nL
   fi
 }
 # DMZ exclusion functions
-is_cidr_or_ip() {
-  local cidr_regex script
-  cidr_regex='^([0-9]{1,3}\\.){3}[0-9]{1,3}(/[1-3]?[0-9])?$'
-  script='import re,sys;sys.exit(0) if re.compile("'"${cidr_regex}"'").match(sys.stdin.read()) else sys.exit(1)'
-  if [ "$#" = 0 ]; then
-    python3 -c "$script"
-  else
-    python3 -c "$script" <<< "$1"
-  fi
-}
 get_src_net() {
   case "$(count_sep "$1")" in
     0)
       return
       ;;
     1)
-      if ! {
-          grep '|$' > /dev/null <<< "$1" || {
-            cut -d'|' -f1 <<< "$1" | is_cidr_or_ip && \
-            cut -d'|' -f2 <<< "$1" | is_cidr_or_ip
-          }
-        }; then
+      if ! grep '|$' > /dev/null <<< "$1"; then
         return
       fi
       ;;
@@ -134,18 +71,15 @@ get_src_net() {
 get_dst_net() {
   case "$(count_sep "$1")" in
     0)
-      if is_cidr_or_ip "$1"; then
+      if grep '^[.0-9/]*$' > /dev/null <<< "$1"; then
         echo "$1"
       fi
       ;;
     1)
-      if cut -d'|' -f2 <<< "$1" | is_cidr_or_ip; then
-        cut -d'|' -f2 <<< "$1"
-      elif grep '|$' > /dev/null <<< "$1"; then
+      if grep '|$' > /dev/null <<< "$1"; then
         return
-      else
-        cut -d'|' -f1 <<< "$1"
       fi
+      cut -d'|' -f1 <<< "$1"
       ;;
     2)
       cut -d'|' -f2 <<< "$1"
@@ -162,12 +96,6 @@ get_port_field() {
       port="$1"
       ;;
     1)
-      if {
-          cut -d'|' -f1 <<< "$1" | is_cidr_or_ip && \
-          cut -d'|' -f2 <<< "$1" | is_cidr_or_ip
-        }; then
-        return
-      fi
       port="$(cut -d'|' -f2 <<< "$1")"
       ;;
     2)
@@ -187,21 +115,19 @@ get_dst_proto() {
   echo "${port#*/}"
 }
 count_sep() {
-  echo "$1" | grep -o "${allowance_rule_separator}" | tr -d '\n' | wc -c
+  echo "$1" | grep -o "${dmz_exclusion_separator}" | tr -d '\n' | wc -c
 }
-add_exclusion_rule_to_iptables() (
-  iptables_args=( iptables -A "${1}" )
+add_dmz_exclusion_to_iptables() (
+  iptables_args=( iptables -A WG_DMZ_allow )
   if [ -n "${src_net:-}" ]; then
     iptables_args+=( -s "${src_net}" )
   fi
   if [ -n "${dst_net:-}" ]; then
     iptables_args+=( -d "${dst_net}" )
   fi
-  if [ "${dst_proto:-}" = icmp ]; then
-    iptables_args+=( -p icmp )
-  elif [ -n "${dst_port:-}" ] && [ -n "${dst_proto:-}" ]; then
+  if [ -n "${dst_port:-}" ] && [ -n "${dst_proto:-}" ]; then
     case "${dst_proto}" in
-      tcp|udp)
+      tcp|udp|icmp)
         iptables_args+=( -p "${dst_proto}" )
         ;;
     esac
@@ -211,17 +137,11 @@ add_exclusion_rule_to_iptables() (
       iptables_args+=( -m multiport --dports "${dst_port}" )
     fi
   fi
-
-  if [ "${dst_proto:-}" = icmp ]; then
-    set -x
-    # all ICMP traffic is recognized as RELATED except for pings
-    "${iptables_args[@]}" --icmp-type echo-request -j ACCEPT
-  else
-    set -x
-    "${iptables_args[@]}" -j ACCEPT
-  fi
+  iptables_args+=( -j ACCEPT )
+  set -x
+  "${iptables_args[@]}"
 )
-set_parsed_environment_variables() {
+apply_dmz_allow_rule() (
   src_net="$(get_src_net "$1")"
   dst_net="$(get_dst_net "$1")"
   dst_port="$(get_dst_port "$1")"
@@ -233,18 +153,12 @@ set_parsed_environment_variables() {
   if [ "${dst_net:-}" = default_route_ip ]; then
     dst_net="${default_route_ip}"
   fi
-}
-apply_allow_rule() (
-  # 1 - allow_rule
-  # 2 - dmz_subnet or isolated_subnet
-  # 3 - WG_DMZ_allow or WG_ISOLATED_allow
-  set_parsed_environment_variables "$1"
   if [ -n "${src_net:-}" ]; then
-    add_exclusion_rule_to_iptables "$3"
+    add_dmz_exclusion_to_iptables
   else
-    while read -r all_nets; do
-      src_net="$all_nets" add_exclusion_rule_to_iptables "$3"
-    done <<< "$(xargs -n1 <<< "${2}")"
+    while read -r all_dmz_nets; do
+      src_net="$all_dmz_nets" add_dmz_exclusion_to_iptables
+    done <<< "$(xargs -n1 <<< "${dmz_subnet}")"
   fi
 )
 # END DMZ exclusion functions
@@ -254,13 +168,9 @@ trap 'rm -f /tmp/wg_started' EXIT
 #
 iptables --new WG_DMZ
 iptables --new WG_DMZ_allow
-iptables --new WG_ISOLATED
-iptables --new WG_ISOLATED_allow
-# ISOLATED config
-iptables -I WG_ISOLATED -j WG_ISOLATED_allow
-iptables -A WG_ISOLATED -j REJECT --reject-with icmp-host-prohibited
-# DMZ config with rfc1918 private IPv4 spaces
+# allow DNS requests in DMZ
 iptables -I WG_DMZ -j WG_DMZ_allow
+# rfc1918 private IP spaces
 iptables -A WG_DMZ -d 10.0.0.0/8 -j REJECT --reject-with icmp-host-prohibited
 iptables -A WG_DMZ -d 172.16.0.0/12 -j REJECT --reject-with icmp-host-prohibited
 iptables -A WG_DMZ -d 192.168.0.0/16 -j REJECT --reject-with icmp-host-prohibited

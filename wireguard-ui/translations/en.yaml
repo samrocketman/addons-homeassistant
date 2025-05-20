@@ -31,7 +31,7 @@ configuration:
   dmz_subnet:
     name: DMZ Subnets
     description: >-
-      A WireGuard CIDR network considered a demilitarized zone.  Hosts may only
+      A Wireguard CIDR network considered a demilitarized zone.  Hosts may only
       access the internet and not local networks.  Exceptions to restricted
       access can be created from DMZ Allowances.
   dmz_subnet_allow:
@@ -40,27 +40,6 @@ configuration:
       These are a set of rules which can allow specific communications to
       internal networks allowed from the DMZ.  See Documentation tab for
       details.
-  dmz_subnet_related:
-    name: DMZ Related Traffic
-    description: >-
-      Allow all ESTABLISHED and RELATED traffic out of the DMZ Subnet.
-  isolated_subnet:
-    name: Isolated Subnets
-    description: >-
-      A WireGuard CIDR network considered an isolated network.  Isolated
-      networks are similar to DMZ except no internet access when all traffic is
-      routed through VPN.  Hosts cannot reach each other.  See documentation
-      for Isolated Allowances for further configuration.
-  isolated_subnet_allow:
-    name: Isolated Allowances
-    description: >-
-      These are a set of rules which can allow specific communications to
-      internal networks allowed from the Isolated Subnets.  See Documentation
-      tab for details.
-  isolated_subnet_related:
-    name: Isolated Related Traffic
-    description: >-
-      Allow all ESTABLISHED and RELATED traffic out of the Isolated Subnet.
   default_interface_addresses:
     name: Default Interface Addresses
     description: >-
