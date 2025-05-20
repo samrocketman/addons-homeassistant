@@ -11,7 +11,6 @@ declare endpoint
 declare port
 declare single_user
 declare user_loglevel
-declare user_loglevel
 declare subnet_ranges
 declare default_interface_addresses
 # WGUI_SERVER_INTERFACE_ADDRESSES="10.252.1.0/24,10.252.2.0/24" -e SUBNET_RANGES="Home:10.252.1.0/24; DMZ Zone: 10.252.2.0/24"
@@ -78,11 +77,19 @@ else
   WGUI_DNS="${dns}"
 fi
 WGUI_ENDPOINT_ADDRESS="${endpoint}:${port%/*}"
+# HA log levels: trace|debug|info|notice|warning|error|fatal
+# Supported log levels: debug|info|warn|error|off
 case "${user_loglevel:-}" in
-  debug|info|warn|error|off)
+  fatal)
+    WGUI_LOG_LEVEL=off
+    ;;
+  warning)
+    WGUI_LOG_LEVEL=warn
+    ;;
+  info|error)
     WGUI_LOG_LEVEL="${user_loglevel}"
     ;;
-  *)
+  trace|debug|*)
     WGUI_LOG_LEVEL=debug
     ;;
 esac

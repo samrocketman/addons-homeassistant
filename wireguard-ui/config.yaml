@@ -1,6 +1,6 @@
 ---
 name: WireGuard UI
-version: 1.1.129
+version: 1.1.130
 url: https://github.com/samrocketman/addons-homeassistant/tree/main/wireguard-ui
 slug: wireguard-ui
 description: >-
@@ -48,7 +48,7 @@ schema:
   isolated_subnet_related: bool?
   default_client_dns: str?
   default_client_endpoint: str?
-  log_level: list(debug|info|warn|error|off)?
+  log_level: list(trace|debug|info|notice|warning|error|fatal)?
   email_from_address: str?
   email_from_name: str?
   sendgrid_api_key: password?
