@@ -104,6 +104,9 @@ refresh_wireguard() {
 }
 # DMZ exclusion functions
 is_cidr_or_ip() {
+  if [ "${1:-}" = default_route_ip ]; then
+    return 0
+  fi
   local cidr_regex script
   cidr_regex='^([0-9]{1,3}\\.){3}[0-9]{1,3}(/[1-3]?[0-9])?$'
   script='import re,sys;sys.exit(0) if re.compile("'"${cidr_regex}"'").match(sys.stdin.read()) else sys.exit(1)'
