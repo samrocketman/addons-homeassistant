@@ -1,4 +1,4 @@
-.PHONY: check goss test schema shellcheck
+.PHONY: check goss goss-shell test schema shellcheck
 
 test: check goss shellcheck schema
 
@@ -9,6 +9,9 @@ check:
 
 goss:
 	docker run -v "$(PWD):/mnt" -w /mnt -v "$(HOME)/usr/bin/goss":/goss --rm --entrypoint '' hassio_wg /goss -g tests/goss.yaml validate
+
+goss-shell:
+	docker run -it -v "$(PWD):/mnt" -w /mnt/tests -v "$(HOME)/usr/bin/goss":/goss --rm --entrypoint '' hassio_wg /bin/bash
 
 schema:
 	yq -P . config.yaml > /dev/null

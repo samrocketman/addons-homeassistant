@@ -76,11 +76,12 @@ SHELL ["/bin/bash", "-exo", "pipefail", "-c"]
 RUN \
   apt-get update; \
   apt-get install -y --no-install-recommends \
-    nginx \
     ca-certificates \
-    wireguard-tools \
+    inotify-tools \
     iptables \
-    inotify-tools; \
+    nginx \
+    python3 \
+    wireguard-tools; \
   rm -fr \
     /tmp/* \
     /var/{cache,log}/* \

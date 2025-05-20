@@ -28,3 +28,10 @@ file:
         group: root
         filetype: file
         contents: []
+command:
+    'python3 -c ''import sys;print("Python " + ".".join(map(lambda x: str(x), sys.version_info[0:2])))''':
+        exit-status: 0
+        stdout: |
+            Python 3.9
+        stderr: ""
+        timeout: 10000
