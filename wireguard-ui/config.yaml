@@ -1,6 +1,6 @@
 ---
 name: WireGuard UI
-version: 1.1.133
+version: 1.1.134
 url: https://github.com/samrocketman/addons-homeassistant/tree/main/wireguard-ui
 slug: wireguard-ui
 description: >-

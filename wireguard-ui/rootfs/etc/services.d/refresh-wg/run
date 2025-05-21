@@ -84,11 +84,27 @@ clear_nats() (
   iptables-save | grep -F -- '-j MASQUERADE' | sed 's/^-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables -t nat {}'
 )
 nat_ip_ranges() { iface_addr | xargs -I {} iptables -t nat -A POSTROUTING -s '{}' -o "${default_nic}" -j MASQUERADE; }
-refresh_wireguard() {
-  if ip link show wg0; then
-    wg-quick down wg0
+checksum_interface() {
+  if [ ! -f /etc/wireguard/wg0.conf ]; then
+    return
   fi
-  wg-quick up wg0
+  awk '$1 ~ /^\[Interface\]$/ { print $1; out=1; next }; out != 1 { next; }; $1 ~ /^[^\[#]/ { print; next}; { exit }' /etc/wireguard/wg0.conf | \
+    sha256sum
+}
+refresh_wireguard() {
+  local current_checksum
+  current_checksum="$(checksum_interface)"
+  if [ "${old_interface_checksum}" = "$current_checksum" ]; then
+    wg syncconf wg0 <(wg-quick strip wg0)
+    echo "Wireguard clients synchronized preserving wg0 interface."
+  else
+    echo "Interface changed... recreating wg0"
+    old_interface_checksum="$current_checksum"
+    if ip link show wg0; then
+      wg-quick down wg0
+    fi
+    wg-quick up wg0
+  fi
   clear_nats
   clear_subnet_chain_rules
   if [ -n "${dmz_subnet:-}" ]; then
@@ -271,6 +287,7 @@ iptables -A WG_DMZ -j RETURN
 #
 # Watch for changes
 #
+export old_interface_checksum=0
 while true; do
   if [ ! -f /tmp/wg_started ]; then
     until [ -f /etc/wireguard/wg0.conf ]; do
