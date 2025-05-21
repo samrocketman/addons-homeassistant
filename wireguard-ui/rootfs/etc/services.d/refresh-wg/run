@@ -21,6 +21,11 @@ if [ "${isolated_subnet:-}" = null ]; then
   unset isolated_subnet
 fi
 
+user_loglevel=$(bashio::config 'log_level' || echo '')
+if [ "$user_loglevel" = trace ]; then
+  set -x
+fi
+
 default_nic="$(ip route | grep default | awk '{print $5}')"
 default_route_ip="$(ip route | awk '$1 == "default" { print $3 }')"
 export default_nic default_route_ip
