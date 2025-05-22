@@ -46,11 +46,10 @@ file:
         contents: []
     /usr/bin/with-contenv:
         exists: true
-        mode: "0777"
+        mode: "0755"
         owner: root
         group: root
-        linked-to: ../../command/with-contenv
-        filetype: symlink
+        filetype: file
         contents: []
     /usr/sbin/iptables:
         exists: true
@@ -95,6 +94,6 @@ command:
     'python3 -c ''import sys;print("Python " + ".".join(map(lambda x: str(x), sys.version_info[0:2])))''':
         exit-status: 0
         stdout: |
-            Python 3.11
+            Python 3.9
         stderr: ""
         timeout: 10000
