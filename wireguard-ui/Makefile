@@ -21,7 +21,9 @@ shellcheck:
 	shellcheck -e SC1008 rootfs/etc/services.d/refresh-wg/run
 	shellcheck -e SC1008 rootfs/etc/services.d/nginx/run
 	shellcheck -e SC1008 rootfs/etc/services.d/wireguard-ui/run
+	shellcheck -e SC1008 rootfs/usr/local/share/service-functions.sh
 
 serve:
 	mkdir -p /tmp/data
-	docker run --cap-add NET_ADMIN --cap-add SYS_ADMIN -v "/tmp/data:/data" -p 127.0.0.1:8080:8099 --rm --entrypoint '' hassio_wg /bin/bash -c "find /data -type f -exec rm -f {} +; conf=/etc/nginx/servers/ingress.conf;sed -i '/deny/d' \$$conf; sed -i '/allow/d' \$$conf; sed -i 's/%%interface%%/0.0.0.0/' \$$conf; exec /init"
+	yq -o json .options config.yaml > /tmp/options.json
+	docker run -v "/tmp/options.json:/data/options.json:ro" --cap-add NET_ADMIN --cap-add SYS_ADMIN -v "/tmp/data:/data" -p 127.0.0.1:8080:8099 --rm --entrypoint '' hassio_wg /bin/bash -c "find /data -type f -exec rm -f {} +; conf=/etc/nginx/servers/ingress.conf;sed -i '/deny/d' \$$conf; sed -i '/allow/d' \$$conf; sed -i 's/%%interface%%/0.0.0.0/' \$$conf; exec /init"

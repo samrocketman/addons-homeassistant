@@ -5,6 +5,9 @@
 # Runs the Wireguard UI
 # ==============================================================================
 
+# shellcheck disable=SC1091
+source /usr/local/share/service-functions.sh
+
 declare clear_session_on_boot
 declare dns
 declare endpoint
@@ -17,29 +20,29 @@ declare default_interface_addresses
 
 bashio::log.info 'Starting Wireguard UI...'
 
-clear_session_on_boot=$(bashio::config 'clear_session_on_boot' || echo '')
-dns=$(bashio::config 'default_client_dns' || echo '')
-endpoint=$(bashio::config 'default_client_endpoint' || echo '')
-port=$(bashio::addon.port '51820/udp' || echo '')
-single_user=$(bashio::config 'single_user_mode' || echo '')
-user_loglevel=$(bashio::config 'log_level' || echo '')
-subnet_ranges=$(bashio::config 'subnet_ranges | join("; ")' || echo '')
-default_interface_addresses="$(bashio::config 'default_interface_addresses | join(",")' || echo '')"
+clear_session_on_boot=$(try_config_or_default 'clear_session_on_boot')
+dns=$(try_config_or_default 'default_client_dns')
+endpoint=$(try_config_or_default 'default_client_endpoint')
+port=$(try_port_or_default '51820/udp' '51820/udp')
+single_user=$(try_config_or_default 'single_user_mode')
+user_loglevel=$(try_config_or_default 'log_level' 'debug')
+subnet_ranges=$(try_config_or_default 'subnet_ranges | join("; ")?')
+default_interface_addresses="$(try_config_or_default 'default_interface_addresses | join(",")?')"
 
 # settings directly passed to WireGuard UI without additional validation
-EMAIL_FROM_ADDRESS=$(bashio::config 'email_from_address' || echo '')
-EMAIL_FROM_NAME=$(bashio::config 'email_from_name' || echo '')
-SENDGRID_API_KEY=$(bashio::config 'sendgrid_api_key' || echo '')
-SMTP_HOSTNAME=$(bashio::config 'smtp_hostname' || echo '')
-SMTP_PORT=$(bashio::config 'smtp_port' || echo '')
-SMTP_USERNAME=$(bashio::config 'smtp_username' || echo '')
-SMTP_PASSWORD=$(bashio::config 'smtp_password' || echo '')
-SMTP_AUTH_TYPE=$(bashio::config 'smtp_auth_type' || echo '')
-SMTP_ENCRYPTION=$(bashio::config 'smtp_encryption' || echo '')
-SMTP_HELO=$(bashio::config 'smtp_helo' || echo '')
-TELEGRAM_TOKEN=$(bashio::config 'telegram_token' || echo '')
-TELEGRAM_ALLOW_CONF_REQUEST=$(bashio::config 'telegram_allow_conf_request' || echo '')
-TELEGRAM_FLOOD_WAIT=$(bashio::config 'telegram_flood_wait' || echo '')
+EMAIL_FROM_ADDRESS=$(try_config_or_default 'email_from_address')
+EMAIL_FROM_NAME=$(try_config_or_default 'email_from_name')
+SENDGRID_API_KEY=$(try_config_or_default 'sendgrid_api_key')
+SMTP_HOSTNAME=$(try_config_or_default 'smtp_hostname')
+SMTP_PORT=$(try_config_or_default 'smtp_port')
+SMTP_USERNAME=$(try_config_or_default 'smtp_username')
+SMTP_PASSWORD=$(try_config_or_default 'smtp_password')
+SMTP_AUTH_TYPE=$(try_config_or_default 'smtp_auth_type')
+SMTP_ENCRYPTION=$(try_config_or_default 'smtp_encryption')
+SMTP_HELO=$(try_config_or_default 'smtp_helo')
+TELEGRAM_TOKEN=$(try_config_or_default 'telegram_token')
+TELEGRAM_ALLOW_CONF_REQUEST=$(try_config_or_default 'telegram_allow_conf_request')
+TELEGRAM_FLOOD_WAIT=$(try_config_or_default 'telegram_flood_wait')
 
 # wireguard-ui will SHA512 checksum the contents of the random password and use
 # that as the password to encrypt sessions.
@@ -114,4 +117,7 @@ wgui_args=( -bind-address "127.0.0.1:8080" )
 if [ "${single_user:-}" = true ]; then
   wgui_args+=( -disable-login )
 fi
+[ -n "${SMTP_PORT:-}" ] || unset SMTP_PORT
+[ -n "${TELEGRAM_ALLOW_CONF_REQUEST:-}" ] || unset TELEGRAM_ALLOW_CONF_REQUEST
+[ -n "${TELEGRAM_FLOOD_WAIT:-}" ] || unset TELEGRAM_FLOOD_WAIT
 exec /wireguard-ui "${wgui_args[@]}"

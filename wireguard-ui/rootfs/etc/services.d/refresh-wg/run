@@ -3,15 +3,18 @@
 
 set -euo pipefail
 
+# shellcheck disable=SC1091
+source /usr/local/share/service-functions.sh
+
 bashio::log.info 'Starting wg0.conf monitor...'
 
-dmz_subnet="$(bashio::config 'dmz_subnet | join(" ")' || echo '')"
-dmz_subnet_allow="$(bashio::config 'dmz_subnet_allow | join(" ")' || echo '')"
-dmz_subnet_related="$(bashio::config 'dmz_subnet_related' || echo '')"
+dmz_subnet="$(try_config_or_default 'dmz_subnet | join(" ")?')"
+dmz_subnet_allow="$(try_config_or_default 'dmz_subnet_allow | join(" ")?')"
+dmz_subnet_related="$(try_config_or_default 'dmz_subnet_related')"
 allowance_rule_separator='|'
-isolated_subnet="$(bashio::config 'isolated_subnet | join(" ")' || echo '')"
-isolated_subnet_allow="$(bashio::config 'isolated_subnet_allow | join(" ")' || echo '')"
-isolated_subnet_related="$(bashio::config 'isolated_subnet_related' || echo '')"
+isolated_subnet="$(try_config_or_default 'isolated_subnet | join(" ")?')"
+isolated_subnet_allow="$(try_config_or_default 'isolated_subnet_allow | join(" ")?')"
+isolated_subnet_related="$(try_config_or_default 'isolated_subnet_related')"
 export allowance_rule_separator dmz_subnet dmz_subnet_allow dmz_subnet_related
 export isolated_subnet isolated_subnet_allow isolated_subnet_related
 if [ "${dmz_subnet:-}" = null ]; then
@@ -21,7 +24,7 @@ if [ "${isolated_subnet:-}" = null ]; then
   unset isolated_subnet
 fi
 
-user_loglevel=$(bashio::config 'log_level' || echo '')
+user_loglevel=$(try_config_or_default 'log_level')
 if [ "$user_loglevel" = trace ]; then
   set -x
 fi
