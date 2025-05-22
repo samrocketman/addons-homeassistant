@@ -14,12 +14,50 @@ file:
         linked-to: /bin/ip
         filetype: symlink
         contents: []
+    /usr/bin/awk:
+        exists: true
+        mode: "0777"
+        owner: root
+        group: root
+        linked-to: /etc/alternatives/awk
+        filetype: symlink
+        contents: []
+    /usr/bin/bashio:
+        exists: true
+        mode: "0777"
+        owner: root
+        group: root
+        linked-to: /usr/lib/bashio/bashio
+        filetype: symlink
+        contents: []
+    /usr/bin/inotifywait:
+        exists: true
+        mode: "0755"
+        owner: root
+        group: root
+        filetype: file
+        contents: []
     /usr/bin/wg-quick:
         exists: true
         mode: "0755"
         owner: root
         group: root
         filetype: file
+        contents: []
+    /usr/bin/with-contenv:
+        exists: true
+        mode: "0755"
+        owner: root
+        group: root
+        filetype: file
+        contents: []
+    /usr/sbin/iptables:
+        exists: true
+        mode: "0777"
+        owner: root
+        group: root
+        linked-to: /etc/alternatives/iptables
+        filetype: symlink
         contents: []
     /usr/sbin/nginx:
         exists: true
@@ -28,6 +66,30 @@ file:
         group: root
         filetype: file
         contents: []
+    /wireguard-ui:
+        exists: true
+        mode: "0755"
+        owner: root
+        group: root
+        filetype: file
+        contents: []
+package:
+    ca-certificates:
+        installed: true
+    coreutils:
+        installed: true
+    inotify-tools:
+        installed: true
+    iptables:
+        installed: true
+    mawk:
+        installed: true
+    nginx:
+        installed: true
+    python3:
+        installed: true
+    wireguard-tools:
+        installed: true
 command:
     'python3 -c ''import sys;print("Python " + ".".join(map(lambda x: str(x), sys.version_info[0:2])))''':
         exit-status: 0
