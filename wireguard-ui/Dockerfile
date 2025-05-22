@@ -34,7 +34,7 @@ RUN \
       echo "    Applied from commit: $1" >> /applied_patches; \
   }; \
   apply_patch 2084a81297e4756271b867863800750c4682dc3e "PR673: Fix PreUp, PostUp, PreDown, and PostDown; https://github.com/ngoduykhanh/wireguard-ui/pull/673"; \
-  apply_patch 508eb2c2801e9592c1cf9841970138bd9fc9e89e "PR671: Dark mode UI; https://github.com/ngoduykhanh/wireguard-ui/pull/671"; \
+  apply_patch 9b0ad608086d6e491710856f0455787131f5ab5f "PR671: Dark mode UI; https://github.com/ngoduykhanh/wireguard-ui/pull/671"; \
   apply_patch 36be3a7ac9b3dcbeea3fb8724fd5db4acb94eaa1 "PR670: Rename session tokens to have wgui prefix; https://github.com/ngoduykhanh/wireguard-ui/pull/670"; \
   apply_patch b3ff328afc56bf449c022454f9a1243f167ce742 "PR660: Fix default MTU to 1420; https://github.com/ngoduykhanh/wireguard-ui/pull/660"; \
   apply_patch 8b75583a0470035d93320fc14c8d8e7f69e4a61a "PR653: Add login logging for banning brute force attacks; https://github.com/ngoduykhanh/wireguard-ui/pull/653"; \
