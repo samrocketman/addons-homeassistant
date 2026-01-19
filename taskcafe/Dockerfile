@@ -7,12 +7,12 @@ FROM ${BUILD_FROM:-ghcr.io/hassio-addons/debian-base/amd64:7.8.3}
 FROM node:14.5-alpine AS frontend
 SHELL ["/bin/sh", "-exc"]
 # build from https://github.com/JordanKnott/taskcafe/pull/135/commits/c12a74592941e2038ca2a63b598a53ad108f039b
+# with my base_prefix feature added on.
 RUN \
   apk --no-cache add curl git; \
-  git clone https://github.com/JordanKnott/taskcafe /usr/src/taskcafe; \
+  git clone -b base_prefix https://github.com/samrocketman/taskcafe /usr/src/taskcafe; \
   cd /usr/src/taskcafe; \
-  git fetch origin +refs/pull/135/head:refs/pull/135/head; \
-  git checkout c12a74592941e2038ca2a63b598a53ad108f039b
+  git checkout 88dde2b5690b9cd57c9a38cc3214c5c206d88437
 WORKDIR /usr/src/taskcafe/frontend
 RUN yarn install
 RUN yarn build

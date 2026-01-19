@@ -11,6 +11,10 @@ bashio::log.info "Starting Task Cafe..."
 if [ ! -d /data/taskcafe/upload ]; then
   mkdir -p /data/taskcafe/upload
 fi
+until [ -f /data/db-password ]; do
+  bashio::log.info "Task Cafe waiting for DB password..."
+  sleep 3
+done
 cat > /data/taskcafe-config.toml <<EOF
 [database]
 password = '$(</data/db-password)'
@@ -19,6 +23,7 @@ EOF
 export TASKCAFE_MIGRATE=true
 export TASKCAFE_EMAIL_NOTIFICATIONS_ENABLED=false
 export TASKCAFE_SERVER_HOSTNAME="${TASKCAFE_SERVER_HOSTNAME:-127.0.0.1:3333}"
+export TASKCAFE_SERVER_BASE_PREFIX="${TASKCAFE_SERVER_BASE_PREFIX:-/hassio_taskcafe/}"
 # Home assistant user header
 export TASKCAFE_REMOTE_USER_HEADER='X-Remote-User-Name'
 

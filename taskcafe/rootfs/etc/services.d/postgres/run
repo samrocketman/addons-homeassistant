@@ -13,11 +13,11 @@ try_init() {
     return
   fi
 
-  { tr -dc 'a-zA-Z0-9' < /dev/urandom || true; } | head -c32 > /data/db-password
+  { tr -dc 'a-zA-Z0-9' < /dev/urandom || true; } | head -c32 > /data/db-password-temp
 
   mkdir -p /data/postgres-db
   chown postgres: /data/postgres-db
-  su - postgres -c '/usr/lib/postgresql/15/bin/initdb --username=taskcafe --pwfile=<(echo '$(</data/db-password)') -D /data/postgres-db'
+  su - postgres -c '/usr/lib/postgresql/15/bin/initdb --username=taskcafe --pwfile=<(echo '$(</data/db-password-temp)') -D /data/postgres-db'
   INIT_SQL="$(mktemp)"
 cat > "$INIT_SQL" <<'EOF'
 CREATE DATABASE taskcafe;
@@ -26,6 +26,7 @@ EOF
   psql -U taskcafe -d taskcafe -h localhost -p 5432 --dbname postgres < "$INIT_SQL"
   rm "$INIT_SQL"
   su - postgres -c '/usr/lib/postgresql/15/bin/pg_ctl -D /data/postgres-db stop -l /data/postgres-db/init.log'
+  mv /data/db-password-temp /data/db-password
 }
 try_init
 exec su - postgres -c '/usr/lib/postgresql/15/bin/postgres -D /data/postgres-db'
