@@ -1,0 +1,31 @@
+#!/usr/bin/with-contenv bashio
+# shellcheck disable=SC2191
+
+set -euo pipefail
+
+# shellcheck disable=SC1091
+source /usr/local/share/service-functions.sh
+
+bashio::log.info "Starting PostgreSQL..."
+
+try_init() {
+  if [ -f /data/postgres-db/PG_VERSION ]; then
+    return
+  fi
+
+  { tr -dc 'a-zA-Z0-9' < /dev/urandom || true; } | head -c32 > /data/db-password
+
+  mkdir -p /data/postgres-db
+  chown postgres: /data/postgres-db
+  su - postgres -c '/usr/lib/postgresql/15/bin/initdb --username=taskcafe --pwfile=<(echo '$(</data/db-password)') -D /data/postgres-db'
+  INIT_SQL="$(mktemp)"
+cat > "$INIT_SQL" <<'EOF'
+CREATE DATABASE taskcafe;
+EOF
+  su - postgres -c '/usr/lib/postgresql/15/bin/pg_ctl -D /data/postgres-db start -l /data/postgres-db/init.log'
+  psql -U taskcafe -d taskcafe -h localhost -p 5432 --dbname postgres < "$INIT_SQL"
+  rm "$INIT_SQL"
+  su - postgres -c '/usr/lib/postgresql/15/bin/pg_ctl -D /data/postgres-db stop -l /data/postgres-db/init.log'
+}
+try_init
+exec su - postgres -c '/usr/lib/postgresql/15/bin/postgres -D /data/postgres-db'

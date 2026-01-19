@@ -1,0 +1,25 @@
+#!/usr/bin/with-contenv bashio
+# shellcheck disable=SC2191
+
+set -euo pipefail
+
+# shellcheck disable=SC1091
+source /usr/local/share/service-functions.sh
+
+bashio::log.info "Starting Task Cafe..."
+
+if [ ! -d /data/taskcafe/upload ]; then
+  mkdir -p /data/taskcafe/upload
+fi
+cat > /data/taskcafe-config.toml <<EOF
+[database]
+password = '$(</data/db-password)'
+EOF
+
+export TASKCAFE_MIGRATE=true
+export TASKCAFE_EMAIL_NOTIFICATIONS_ENABLED=false
+export TASKCAFE_SERVER_HOSTNAME='127.0.0.1:3333'
+# Home assistant user header
+export TASKCAFE_REMOTE_USER_HEADER='X-Remote-User-Name'
+
+exec /taskcafe --config /data/taskcafe-config.toml web
