@@ -12,7 +12,7 @@ RUN \
   apk --no-cache add curl git; \
   git clone -b base_prefix https://github.com/samrocketman/taskcafe /usr/src/taskcafe; \
   cd /usr/src/taskcafe; \
-  git checkout 88dde2b5690b9cd57c9a38cc3214c5c206d88437
+  git checkout 3d272b4b9f4fe3915335ee052f7b47f2dfb07037
 WORKDIR /usr/src/taskcafe/frontend
 RUN yarn install
 RUN yarn build
