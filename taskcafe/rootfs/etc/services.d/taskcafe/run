@@ -8,8 +8,8 @@ source /usr/local/share/service-functions.sh
 
 bashio::log.info "Starting Task Cafe..."
 
-if [ ! -d /data/taskcafe/upload ]; then
-  mkdir -p /data/taskcafe/upload
+if [ ! -d /data/taskcafe/uploads ]; then
+  mkdir -p /data/taskcafe/uploads
 fi
 until [ -f /data/db-password ]; do
   bashio::log.info "Task Cafe waiting for DB password..."
@@ -26,5 +26,5 @@ export TASKCAFE_SERVER_HOSTNAME="${TASKCAFE_SERVER_HOSTNAME:-127.0.0.1:3333}"
 export TASKCAFE_SERVER_BASE_PREFIX="${TASKCAFE_SERVER_BASE_PREFIX:-/hassio_taskcafe/}"
 # Home assistant user header
 export TASKCAFE_REMOTE_USER_HEADER='X-Remote-User-Name'
-
+cd /data/taskcafe
 exec /taskcafe --config /data/taskcafe-config.toml web
