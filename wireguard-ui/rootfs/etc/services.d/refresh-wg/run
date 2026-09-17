@@ -33,6 +33,84 @@ default_nic="$(ip route | grep default | awk '{print $5}')"
 default_route_ip="$(ip route | awk '$1 == "default" { print $3 }')"
 export default_nic default_route_ip
 
+# the nft backend keeps every rule in a table of its own, so whole chains can be
+# flushed instead of matching rules to delete them one by one
+nft_table=wg_ui
+probe_chain=WG_BACKEND_PROBE
+probe_table=wg_ui_probe
+# An nftables-only kernel still ships a working iptables binary, so the presence
+# of the binary says nothing about whether it can program these rules, and
+# neither does anything readable in /proc. Ask the kernel instead: build the
+# extensions refresh_wireguard depends on in a throwaway chain that nothing
+# jumps to. Probing is also what autoloads the netfilter modules, so a kernel
+# that supports iptables but has not used it yet is not mistaken for one that
+# cannot.
+clear_probe_iptables() {
+  iptables --flush "${probe_chain}" || true
+  iptables --delete-chain "${probe_chain}" || true
+  iptables -t nat --flush "${probe_chain}" || true
+  iptables -t nat --delete-chain "${probe_chain}" || true
+} > /dev/null 2>&1
+probe_iptables() {
+  local rc=0
+  # a chain left behind by a killed run would fail --new and look like a
+  # broken backend
+  clear_probe_iptables
+  iptables --new "${probe_chain}" || return 1
+  iptables -A "${probe_chain}" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT || rc=1
+  iptables -A "${probe_chain}" -p udp -m multiport --dports 53,443 -j ACCEPT || rc=1
+  iptables -A "${probe_chain}" -j REJECT --reject-with icmp-host-prohibited || rc=1
+  if iptables -t nat -N "${probe_chain}"; then
+    iptables -t nat -A "${probe_chain}" -j MASQUERADE || rc=1
+  else
+    rc=1
+  fi
+  clear_probe_iptables
+  return "${rc}"
+} > /dev/null 2>&1
+probe_nft() {
+  local rc=0
+  nft delete table ip "${probe_table}" || true
+  nft add table ip "${probe_table}" || return 1
+  nft add chain ip "${probe_table}" probe || rc=1
+  nft add rule ip "${probe_table}" probe ct state established,related accept || rc=1
+  nft add rule ip "${probe_table}" probe udp dport '{ 53, 443 }' accept || rc=1
+  nft add rule ip "${probe_table}" probe reject with icmp type host-prohibited || rc=1
+  nft delete table ip "${probe_table}" || true
+  return "${rc}"
+} > /dev/null 2>&1
+
+# An iptables binary is usually just a front-end for nftables (iptables-nft), and
+# then the kernel stores these rules as nftables rules regardless, so nft is
+# driven directly rather than through the xtables compat layer that
+# nftables-only kernels no longer carry. A legacy x_tables build means the host
+# is not driving nftables, so there iptables stays the closer match.
+if command -v iptables > /dev/null 2>&1 && ! iptables --version 2>/dev/null | grep -qF '(nf_tables)'; then
+  backend_order=( iptables nft )
+else
+  backend_order=( nft iptables )
+fi
+firewall_backend=
+for candidate in "${backend_order[@]}"; do
+  case "${candidate}" in
+    iptables)
+      command -v iptables > /dev/null 2>&1 && probe_iptables && firewall_backend=iptables
+      ;;
+    nft)
+      command -v nft > /dev/null 2>&1 && probe_nft && firewall_backend=nft
+      ;;
+  esac
+  if [ -n "${firewall_backend}" ]; then break; fi
+done
+if [ -z "${firewall_backend}" ]; then
+  bashio::exit.nok 'Neither iptables nor nft can program firewall rules on this kernel.'
+fi
+if [ "${firewall_backend}" != "${backend_order[0]}" ]; then
+  bashio::log.warning "${backend_order[0]} is unavailable or cannot program rules on this kernel, using ${firewall_backend}."
+fi
+export firewall_backend nft_table
+bashio::log.info "Managing firewall rules with ${firewall_backend}."
+
 # daemon restarts wg interface on modification
 iface_addr() { awk '$1 == "[Interface]" {iface=1; next}; iface == 1 && $1 == "Address" {print $3; exit}' /etc/wireguard/wg0.conf | tr ',' '\n'; }
 clear_chain_rule() {
@@ -55,6 +133,14 @@ clear_chain_rule() {
   esac
 }
 clear_subnet_chain_rules() (
+  if [ "${firewall_backend}" = nft ]; then
+    # OUTPUT and FORWARD only ever hold the jumps added by add_chain_rules
+    nft flush chain ip "${nft_table}" OUTPUT
+    nft flush chain ip "${nft_table}" FORWARD
+    nft flush chain ip "${nft_table}" WG_DMZ_allow
+    nft flush chain ip "${nft_table}" WG_ISOLATED_allow
+    return
+  fi
   set +o pipefail
   clear_chain_rule OUTPUT WG_DMZ
   clear_chain_rule FORWARD WG_DMZ
@@ -66,6 +152,11 @@ clear_subnet_chain_rules() (
 )
 add_isolated_rules() {
   if [ -z "${isolated_subnet:-}" ]; then return; fi
+  if [ "${firewall_backend}" = nft ]; then
+    echo "$isolated_subnet" | xargs -n1 | xargs -I{} -- nft insert rule ip "${nft_table}" OUTPUT ip saddr {} jump WG_DMZ
+    echo "$isolated_subnet" | xargs -n1 | xargs -I{} -- nft insert rule ip "${nft_table}" FORWARD ip saddr {} jump WG_DMZ
+    return
+  fi
   echo "$isolated_subnet" | xargs -n1 | xargs -I{} -- iptables -I OUTPUT -s {} -j WG_DMZ
   echo "$isolated_subnet" | xargs -n1 | xargs -I{} -- iptables -I FORWARD -s {} -j WG_DMZ
 }
@@ -75,23 +166,42 @@ add_chain_rules() {
   # 3 - WG_DMZ or WG_ISOLATED
   # 4 - WG_DMZ_allow or WG_ISOLATED_allow
   # 5 - dmz_subnet_related or isolated_subnet_related
-  echo "$1" | xargs -n1 | xargs -I{} -- iptables -I OUTPUT -s {} -j "$3"
-  echo "$1" | xargs -n1 | xargs -I{} -- iptables -I FORWARD -s {} -j "$3"
+  if [ "${firewall_backend}" = nft ]; then
+    echo "$1" | xargs -n1 | xargs -I{} -- nft insert rule ip "${nft_table}" OUTPUT ip saddr {} jump "$3"
+    echo "$1" | xargs -n1 | xargs -I{} -- nft insert rule ip "${nft_table}" FORWARD ip saddr {} jump "$3"
+  else
+    echo "$1" | xargs -n1 | xargs -I{} -- iptables -I OUTPUT -s {} -j "$3"
+    echo "$1" | xargs -n1 | xargs -I{} -- iptables -I FORWARD -s {} -j "$3"
+  fi
   while read -r allow_rule; do
     apply_allow_rule "$allow_rule" "$1" "$4"
   done <<< "$(xargs -n1 <<< "${2:-}")"
   if [ "${5:-}" = true ]; then
-    iptables -I "${4}" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+    if [ "${firewall_backend}" = nft ]; then
+      nft insert rule ip "${nft_table}" "${4}" ct state established,related accept
+    else
+      iptables -I "${4}" -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+    fi
   fi
 }
 clear_nats() (
+  if [ "${firewall_backend}" = nft ]; then
+    nft flush chain ip "${nft_table}" POSTROUTING
+    return
+  fi
   if ! iptables-save | grep -F -- '-j MASQUERADE'; then
     return
   fi
   set +o pipefail
   iptables-save | grep -F -- '-j MASQUERADE' | sed 's/^-A/-D/' | tr '\n' '\0' | xargs -0 -I{} /bin/bash -c 'iptables -t nat {}'
 )
-nat_ip_ranges() { iface_addr | xargs -I {} iptables -t nat -A POSTROUTING -s '{}' -o "${default_nic}" -j MASQUERADE; }
+nat_ip_ranges() {
+  if [ "${firewall_backend}" = nft ]; then
+    iface_addr | xargs -I {} nft add rule ip "${nft_table}" POSTROUTING ip saddr '{}' oifname "${default_nic}" masquerade
+    return
+  fi
+  iface_addr | xargs -I {} iptables -t nat -A POSTROUTING -s '{}' -o "${default_nic}" -j MASQUERADE
+}
 checksum_interface() {
   if [ ! -f /etc/wireguard/wg0.conf ]; then
     return
@@ -123,7 +233,11 @@ refresh_wireguard() {
   fi
   nat_ip_ranges
   if [ -n "${dmz_subnet:-}" ] || [ -n "${isolated_subnet:-}" ]; then
-    iptables -nL
+    if [ "${firewall_backend}" = nft ]; then
+      nft list table ip "${nft_table}"
+    else
+      iptables -nL
+    fi
   fi
 }
 # DMZ exclusion functions
@@ -250,6 +364,41 @@ add_exclusion_rule_to_iptables() (
     "${iptables_args[@]}" -j ACCEPT
   fi
 )
+add_exclusion_rule_to_nft() (
+  nft_args=( nft add rule ip "${nft_table}" "${1}" )
+  if [ -n "${src_net:-}" ]; then
+    nft_args+=( ip saddr "${src_net}" )
+  fi
+  if [ -n "${dst_net:-}" ]; then
+    nft_args+=( ip daddr "${dst_net}" )
+  fi
+  if [ "${dst_proto:-}" = icmp ]; then
+    # all ICMP traffic is recognized as RELATED except for pings
+    nft_args+=( icmp type echo-request )
+  elif [ -n "${dst_port:-}" ] && [ -n "${dst_proto:-}" ]; then
+    # nft spells multiport ranges a-b where iptables spells them a:b
+    case "${dst_proto}" in
+      tcp|udp)
+        nft_args+=( "${dst_proto}" dport "{ ${dst_port//:/-} }" )
+        ;;
+      *)
+        # any protocol still has to honour the port, or the rule would open
+        # every port on the destination
+        nft_args+=( meta l4proto '{ tcp, udp }' th dport "{ ${dst_port//:/-} }" )
+        ;;
+    esac
+  fi
+
+  set -x
+  "${nft_args[@]}" accept
+)
+add_exclusion_rule() {
+  if [ "${firewall_backend}" = nft ]; then
+    add_exclusion_rule_to_nft "$@"
+  else
+    add_exclusion_rule_to_iptables "$@"
+  fi
+}
 set_parsed_environment_variables() {
   src_net="$(get_src_net "$1")"
   dst_net="$(get_dst_net "$1")"
@@ -269,10 +418,10 @@ apply_allow_rule() (
   # 3 - WG_DMZ_allow or WG_ISOLATED_allow
   set_parsed_environment_variables "$1"
   if [ -n "${src_net:-}" ]; then
-    add_exclusion_rule_to_iptables "$3"
+    add_exclusion_rule "$3"
   else
     while read -r all_nets; do
-      src_net="$all_nets" add_exclusion_rule_to_iptables "$3"
+      src_net="$all_nets" add_exclusion_rule "$3"
     done <<< "$(xargs -n1 <<< "${2}")"
   fi
 )
@@ -281,19 +430,50 @@ trap 'rm -f /tmp/wg_started' EXIT
 #
 # Create wireguard DMZ
 #
-iptables --new WG_DMZ
-iptables --new WG_DMZ_allow
-iptables --new WG_ISOLATED
-iptables --new WG_ISOLATED_allow
-# ISOLATED config
-iptables -I WG_ISOLATED -j WG_ISOLATED_allow
-iptables -A WG_ISOLATED -j REJECT --reject-with icmp-host-prohibited
-# DMZ config with rfc1918 private IPv4 spaces
-iptables -I WG_DMZ -j WG_DMZ_allow
-iptables -A WG_DMZ -d 10.0.0.0/8 -j REJECT --reject-with icmp-host-prohibited
-iptables -A WG_DMZ -d 172.16.0.0/12 -j REJECT --reject-with icmp-host-prohibited
-iptables -A WG_DMZ -d 192.168.0.0/16 -j REJECT --reject-with icmp-host-prohibited
-iptables -A WG_DMZ -j RETURN
+create_wg_chains_iptables() {
+  iptables --new WG_DMZ
+  iptables --new WG_DMZ_allow
+  iptables --new WG_ISOLATED
+  iptables --new WG_ISOLATED_allow
+  # ISOLATED config
+  iptables -I WG_ISOLATED -j WG_ISOLATED_allow
+  iptables -A WG_ISOLATED -j REJECT --reject-with icmp-host-prohibited
+  # DMZ config with rfc1918 private IPv4 spaces
+  iptables -I WG_DMZ -j WG_DMZ_allow
+  iptables -A WG_DMZ -d 10.0.0.0/8 -j REJECT --reject-with icmp-host-prohibited
+  iptables -A WG_DMZ -d 172.16.0.0/12 -j REJECT --reject-with icmp-host-prohibited
+  iptables -A WG_DMZ -d 192.168.0.0/16 -j REJECT --reject-with icmp-host-prohibited
+  iptables -A WG_DMZ -j RETURN
+}
+create_wg_chains_nft() {
+  # iptables hangs its chains off the built-in filter and nat tables, so the nft
+  # backend brings its own hooks at the equivalent priorities
+  if nft list table ip "${nft_table}" > /dev/null 2>&1; then
+    nft delete table ip "${nft_table}"
+  fi
+  nft add table ip "${nft_table}"
+  nft add chain ip "${nft_table}" OUTPUT '{ type filter hook output priority filter; policy accept; }'
+  nft add chain ip "${nft_table}" FORWARD '{ type filter hook forward priority filter; policy accept; }'
+  nft add chain ip "${nft_table}" POSTROUTING '{ type nat hook postrouting priority srcnat; policy accept; }'
+  nft add chain ip "${nft_table}" WG_DMZ
+  nft add chain ip "${nft_table}" WG_DMZ_allow
+  nft add chain ip "${nft_table}" WG_ISOLATED
+  nft add chain ip "${nft_table}" WG_ISOLATED_allow
+  # ISOLATED config
+  nft add rule ip "${nft_table}" WG_ISOLATED jump WG_ISOLATED_allow
+  nft add rule ip "${nft_table}" WG_ISOLATED reject with icmp type host-prohibited
+  # DMZ config with rfc1918 private IPv4 spaces
+  nft add rule ip "${nft_table}" WG_DMZ jump WG_DMZ_allow
+  nft add rule ip "${nft_table}" WG_DMZ ip daddr 10.0.0.0/8 reject with icmp type host-prohibited
+  nft add rule ip "${nft_table}" WG_DMZ ip daddr 172.16.0.0/12 reject with icmp type host-prohibited
+  nft add rule ip "${nft_table}" WG_DMZ ip daddr 192.168.0.0/16 reject with icmp type host-prohibited
+  nft add rule ip "${nft_table}" WG_DMZ return
+}
+if [ "${firewall_backend}" = nft ]; then
+  create_wg_chains_nft
+else
+  create_wg_chains_iptables
+fi
 #
 # Watch for changes
 #

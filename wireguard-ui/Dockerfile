@@ -80,6 +80,7 @@ RUN \
     ca-certificates \
     inotify-tools \
     iptables \
+    nftables \
     nginx \
     python3 \
     wireguard-tools; \

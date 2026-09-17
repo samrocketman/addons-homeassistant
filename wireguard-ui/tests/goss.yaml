@@ -67,6 +67,13 @@ file:
         linked-to: /etc/alternatives/iptables
         filetype: symlink
         contents: []
+    /usr/sbin/nft:
+        exists: true
+        mode: "0755"
+        owner: root
+        group: root
+        filetype: file
+        contents: []
     /usr/sbin/nginx:
         exists: true
         mode: "0755"
@@ -91,6 +98,8 @@ package:
     iptables:
         installed: true
     mawk:
+        installed: true
+    nftables:
         installed: true
     nginx:
         installed: true
