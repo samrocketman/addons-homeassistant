@@ -337,3 +337,46 @@ Example _Isolated Allowances_ configuration:
 ```yaml
 - 10.252.5.0/24|default_route_ip|8123/tcp
 ```
+
+## Spoke Networks (Hub & Fork)
+
+A spoke network routes **all** of its WireGuard clients' traffic through a single
+"hub" IP, which then forwards that traffic remotely.  This is useful for chaining
+VPNs: a spoke client's packets are funneled to the hub, and the hub decides where
+they go next (another tunnel, a remote LAN, or the internet).
+
+By default every spoke network forwards traffic to the **first address** in its
+CIDR (`*.1`).  For example, a spoke of `10.50.40.0/24` forwards all traffic to the
+hub at `10.50.40.1`.  If a client connects with `10.50.40.2`, every packet it sends
+is forwarded to `10.50.40.1`.
+
+The hub IP must itself be reachable from the WireGuard server (for example, it is
+also a WireGuard client) so that it can carry the spoke traffic onward.
+
+### Configuring a Spoke
+
+First, add the spoke network via the WireGuard UI web UI.
+
+1. Visit web UI.
+2. Click _Wireguard Server_ menu.
+3. Under _Server Interface Addresses_ add `10.50.40.0/24`.  Create a client at
+   `10.50.40.1` (the hub) plus any spoke clients such as `10.50.40.2`.
+
+Next, visit Home Assistant _Settings_, _Add-ons_, _WireGuard UI_, and select
+_Configuration_ pane.  Add the spoke network to:
+
+- _Spoke Networks_
+
+Example _Spoke Networks_ configuration:
+
+```yaml
+- 10.50.40.0/24
+```
+
+Traffic from `10.50.40.0/24` is forwarded to hub `10.50.40.1`.  Save and restart
+the add-on (or save without restart if connected via VPN) for the firewall rules
+to take effect.
+
+> **Note:** Spoke networks are applied by the `refresh-wg` monitor whenever the
+> `wg0` interface changes or on start-up.  The hub IP is derived from each CIDR's
+> first address; there is no per-spoke override in this release.

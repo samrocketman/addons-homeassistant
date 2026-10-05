@@ -61,6 +61,13 @@ configuration:
     name: Isolated Related Traffic
     description: >-
       Allow all ESTABLISHED and RELATED traffic out of the Isolated Subnet.
+  spoke_networks:
+    name: Spoke Networks (Hub & Fork)
+    description: >-
+      List of WireGuard CIDR networks configured as spokes.  All traffic from a
+      spoke network is forwarded through its hub IP, which then forwards it
+      remotely.  By default the hub is the first address in the CIDR (*.1).
+      For example `10.50.40.0/24` forwards all traffic to `10.50.40.1`.
   default_interface_addresses:
     name: Default Interface Addresses
     description: >-

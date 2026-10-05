@@ -15,13 +15,18 @@ allowance_rule_separator='|'
 isolated_subnet="$(try_config_or_default 'isolated_subnet | join(" ")?')"
 isolated_subnet_allow="$(try_config_or_default 'isolated_subnet_allow | join(" ")?')"
 isolated_subnet_related="$(try_config_or_default 'isolated_subnet_related')"
+spoke_network="$(try_config_or_default 'spoke_networks | join(" ")?')"
 export allowance_rule_separator dmz_subnet dmz_subnet_allow dmz_subnet_related
 export isolated_subnet isolated_subnet_allow isolated_subnet_related
+export spoke_network
 if [ "${dmz_subnet:-}" = null ]; then
   unset dmz_subnet
 fi
 if [ "${isolated_subnet:-}" = null ]; then
   unset isolated_subnet
+fi
+if [ "${spoke_network:-}" = null ]; then
+  unset spoke_network
 fi
 
 user_loglevel=$(try_config_or_default 'log_level')
@@ -139,6 +144,7 @@ clear_subnet_chain_rules() (
     nft flush chain ip "${nft_table}" FORWARD
     nft flush chain ip "${nft_table}" WG_DMZ_allow
     nft flush chain ip "${nft_table}" WG_ISOLATED_allow
+    nft flush chain ip "${nft_table}" WG_SPOKE
     return
   fi
   set +o pipefail
@@ -149,6 +155,10 @@ clear_subnet_chain_rules() (
   clear_chain_rule OUTPUT WG_ISOLATED
   clear_chain_rule FORWARD WG_ISOLATED
   clear_chain_rule WG_ISOLATED_allow
+
+  clear_chain_rule OUTPUT WG_SPOKE
+  clear_chain_rule FORWARD WG_SPOKE
+  clear_chain_rule WG_SPOKE
 )
 add_isolated_rules() {
   if [ -z "${isolated_subnet:-}" ]; then return; fi
@@ -231,6 +241,7 @@ refresh_wireguard() {
   if [ -n "${isolated_subnet:-}" ]; then
     add_chain_rules "${isolated_subnet}" "${isolated_subnet_allow:-}" WG_ISOLATED WG_ISOLATED_allow "${isolated_subnet_related:-}"
   fi
+  add_spoke_rules
   nat_ip_ranges
   if [ -n "${dmz_subnet:-}" ] || [ -n "${isolated_subnet:-}" ]; then
     if [ "${firewall_backend}" = nft ]; then
@@ -426,6 +437,43 @@ apply_allow_rule() (
   fi
 )
 # END DMZ exclusion functions
+#
+# Spoke networks (hub & fork)
+#
+# A spoke network routes all of its WireGuard clients' traffic through a single
+# "hub" IP, which then forwards it remotely.  By default the hub is the first
+# address in the spoke CIDR (*.1).  For example, 10.50.40.0/24 -> hub 10.50.40.1.
+spoke_hub_ip() {
+  # $1 - CIDR such as 10.50.40.0/24
+  echo "$1" | awk -F'/' '{split($1,a,"."); printf "%s.%s.%s.1\n", a[1], a[2], a[3]}'
+}
+add_spoke_rules() (
+  if [ -z "${spoke_network:-}" ]; then return; fi
+  # Route all traffic from each spoke subnet through its hub by accepting the
+  # spoke source address in OUTPUT/FORWARD and forwarding it to the hub.
+  for cidr in $spoke_network; do
+    hub_ip="$(spoke_hub_ip "$cidr")"
+    export spoke_cidr="$cidr" spoke_hub="${hub_ip}"
+    if [ "${firewall_backend}" = nft ]; then
+      echo "$cidr" | xargs -I{} -- nft insert rule ip "${nft_table}" OUTPUT ip saddr {} jump WG_SPOKE
+      echo "$cidr" | xargs -I{} -- nft insert rule ip "${nft_table}" FORWARD ip saddr {} jump WG_SPOKE
+    else
+      echo "$cidr" | xargs -I{} -- iptables -I OUTPUT -s {} -j WG_SPOKE
+      echo "$cidr" | xargs -I{} -- iptables -I FORWARD -s {} -j WG_SPOKE
+    fi
+  done
+  # NAT the spoke subnet so the hub can remotely forward its traffic.
+  if [ "${firewall_backend}" = nft ]; then
+    for cidr in $spoke_network; do
+      nft add rule ip "${nft_table}" POSTROUTING ip saddr "$cidr" masquerade
+    done
+  else
+    for cidr in $spoke_network; do
+      iptables -t nat -A POSTROUTING -s "$cidr" -j MASQUERADE
+    done
+  fi
+)
+# END Spoke networks (hub & fork)
 trap 'rm -f /tmp/wg_started' EXIT
 #
 # Create wireguard DMZ
@@ -435,9 +483,12 @@ create_wg_chains_iptables() {
   iptables --new WG_DMZ_allow
   iptables --new WG_ISOLATED
   iptables --new WG_ISOLATED_allow
+  iptables --new WG_SPOKE
   # ISOLATED config
   iptables -I WG_ISOLATED -j WG_ISOLATED_allow
   iptables -A WG_ISOLATED -j REJECT --reject-with icmp-host-prohibited
+  # SPOKE (hub & fork) config: forward all spoke traffic to its hub and out
+  iptables -A WG_SPOKE -j ACCEPT
   # DMZ config with rfc1918 private IPv4 spaces
   iptables -I WG_DMZ -j WG_DMZ_allow
   iptables -A WG_DMZ -d 10.0.0.0/8 -j REJECT --reject-with icmp-host-prohibited
@@ -459,9 +510,12 @@ create_wg_chains_nft() {
   nft add chain ip "${nft_table}" WG_DMZ_allow
   nft add chain ip "${nft_table}" WG_ISOLATED
   nft add chain ip "${nft_table}" WG_ISOLATED_allow
+  nft add chain ip "${nft_table}" WG_SPOKE
   # ISOLATED config
   nft add rule ip "${nft_table}" WG_ISOLATED jump WG_ISOLATED_allow
   nft add rule ip "${nft_table}" WG_ISOLATED reject with icmp type host-prohibited
+  # SPOKE (hub & fork) config: forward all spoke traffic to its hub and out
+  nft add rule ip "${nft_table}" WG_SPOKE accept
   # DMZ config with rfc1918 private IPv4 spaces
   nft add rule ip "${nft_table}" WG_DMZ jump WG_DMZ_allow
   nft add rule ip "${nft_table}" WG_DMZ ip daddr 10.0.0.0/8 reject with icmp type host-prohibited

@@ -1,3 +1,7 @@
+# 1.3.0
+
+- Add Spoke Networks (hub & fork): route all traffic from a spoke subnet through its hub IP (default `*.1`).
+
 # 1.2.1
 
 - nftables support
