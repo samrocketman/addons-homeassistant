@@ -14,6 +14,7 @@ A friendly web frontend for managing WireGuard clients through Home Assistant.
 - Self-serve and web based.
 - QR-Code for convenient mobile client configuration.
 - Optional single-user or multi-user support behind authenticated ingress.
+- Bandwidth throttling per WireGuard network, client, destination and service.
 - See Addon Documentation to get started after installation.
 
 > **Note:** Initial install can take a few minutes since WireGuard UI is compiled from source.

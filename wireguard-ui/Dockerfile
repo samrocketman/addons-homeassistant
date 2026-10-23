@@ -79,6 +79,7 @@ RUN \
   apt-get install -y --no-install-recommends \
     ca-certificates \
     inotify-tools \
+    iproute2 \
     iptables \
     nftables \
     nginx \

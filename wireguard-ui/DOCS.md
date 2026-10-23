@@ -338,6 +338,91 @@ Example _Isolated Allowances_ configuration:
 - 10.252.5.0/24|default_route_ip|8123/tcp
 ```
 
+## Bandwidth Throttling
+
+By default, no bandwidth throttling is defined.
+
+Bandwidth throttling limits the download and/or upload bandwidth of WireGuard
+clients (a single IP, a whole subnet, or all of them) using Linux traffic
+control (`tc` HTB).  It uses the same rule format as the DMZ and Isolated
+allowances with a rate appended, so if you can read an allowance rule, you can
+read a throttling rule.
+
+Rules are applied on the `wg0` interface: downloads are shaped on the egress
+path and uploads by mirroring the ingress path to an `ifb` device.  Throttling
+is (re)applied automatically whenever the WireGuard configuration changes.
+
+### Throttling rule format
+
+There's eight ways you can format a throttling rule.
+
+```yaml
+- rate
+- dst_net|rate
+- port/proto|rate
+- dst_net|port/proto|rate
+- src_net|rate
+- src_net|dst_net|rate
+- src_net||port/proto|rate
+- src_net|dst_net|port/proto|rate
+```
+
+Definitions:
+
+- `src_net` - the WireGuard client (IP or CIDR) being throttled.  **Note:** If
+  `src_net` is not declared, the rule applies to **all** WireGuard clients.
+- `dst_net` - optional destination network (CIDR or IP) the cap applies to.
+  `default_route_ip` is supported just like in allowance rules.
+- `port` - the service port of the connection.  Multiport syntax such as
+  `53,443,30000:32000` is supported.
+- `proto` - `tcp`, `udp`, `icmp`, or `any`.
+- `rate` - the bandwidth cap as `<n>kbit` or `<n>mbit`, e.g. `10mbit` or
+  `1500kbit`.
+
+A rate may be a single value (download cap) or a `down,up` pair which also caps
+the upload bandwidth.
+
+### Examples
+
+Cap the whole `DMZ Network` subnet at 10 Mbit/s download and 5 Mbit/s upload:
+
+```yaml
+- 10.252.2.0/24|10mbit,5mbit
+```
+
+Cap a single client's downloads at 5 Mbit/s:
+
+```yaml
+- 10.252.2.1|5mbit
+```
+
+Limit what a client can download from Home Assistant (the default route IP) at
+most 1 Mbit/s:
+
+```yaml
+- 10.252.2.1|default_route_ip|1mbit
+```
+
+Limit a client's TLS traffic to a specific server on both directions:
+
+```yaml
+- 10.252.2.1|192.168.0.2|443/tcp|500kbit,250kbit
+```
+
+Limit DNS for all WireGuard clients to 100 kbit/s download:
+
+```yaml
+- 53/udp|100kbit
+```
+
+> **Note:** Rules take effect on save (the add-on restarts) or the next time
+> the WireGuard configuration changes.  Check the add-on log for `throttle`
+> entries to verify which rules were applied or rejected.
+
+> **Note:** Upload throttling requires the `ifb` kernel module.  If it is not
+> available on your system, upload caps are skipped with a warning and download
+> caps still apply.
+
 ## Spoke Networks (Hub & Fork)
 
 A spoke network routes **all** of its WireGuard clients' traffic through a single

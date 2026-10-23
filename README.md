@@ -1,6 +1,6 @@
 # Home Assistant Add-ons
 
-- [wireguard-ui](wireguard-ui) An easy to manage web UI for remote access to home assistant.  Support for DMZ networks, isolated networks, and multi-home networks.
+- [wireguard-ui](wireguard-ui) An easy to manage web UI for remote access to home assistant.  Support for DMZ networks, isolated networks, multi-home networks, and bandwidth throttling.
 
 ### Upstream source
 

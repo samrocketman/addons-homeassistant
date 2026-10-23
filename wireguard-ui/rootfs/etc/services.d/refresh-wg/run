@@ -6,6 +6,9 @@ set -euo pipefail
 # shellcheck disable=SC1091
 source /usr/local/share/service-functions.sh
 
+# shellcheck disable=SC1091
+source /usr/local/share/throttle.sh
+
 bashio::log.info 'Starting wg0.conf monitor...'
 
 dmz_subnet="$(try_config_or_default 'dmz_subnet | join(" ")?')"
@@ -243,6 +246,7 @@ refresh_wireguard() {
   fi
   add_spoke_rules
   nat_ip_ranges
+  refresh_throttling || bashio::log.warning 'bandwidth throttling could not be fully applied; firewall rules remain active.'
   if [ -n "${dmz_subnet:-}" ] || [ -n "${isolated_subnet:-}" ]; then
     if [ "${firewall_backend}" = nft ]; then
       nft list table ip "${nft_table}"

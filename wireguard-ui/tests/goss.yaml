@@ -44,6 +44,12 @@ file:
         group: root
         filetype: file
         contents: []
+    /usr/sbin/tc:
+        exists: true
+        owner: root
+        group: root
+        filetype: file
+        contents: []
     /usr/bin/wg-quick:
         exists: true
         mode: "0755"
@@ -96,6 +102,8 @@ package:
     inotify-tools:
         installed: true
     iptables:
+        installed: true
+    iproute2:
         installed: true
     mawk:
         installed: true

@@ -1,6 +1,6 @@
-.PHONY: check goss goss-shell test schema shellcheck
+.PHONY: check goss goss-shell test schema shellcheck throttle
 
-test: check goss shellcheck schema
+test: check goss shellcheck schema throttle
 
 check:
 	  docker build --build-arg BUILD_FROM="$$(yq '.build_from.amd64' build.yaml)" -t hassio_wg .
@@ -22,6 +22,10 @@ shellcheck:
 	shellcheck -e SC1008 rootfs/etc/services.d/nginx/run
 	shellcheck -e SC1008 rootfs/etc/services.d/wireguard-ui/run
 	shellcheck -e SC1008 rootfs/usr/local/share/service-functions.sh
+	shellcheck -e SC1008 rootfs/usr/local/share/throttle.sh
+
+throttle:
+	bash tests/test-throttle.sh
 
 serve:
 	mkdir -p /tmp/data
