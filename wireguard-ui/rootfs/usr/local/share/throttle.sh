@@ -54,6 +54,7 @@ T_UP=''
 # application state
 THROTTLE_DOWN_READY=false
 THROTTLE_IFB_READY=false
+THROTTLE_IFB_FAILED=false
 
 throttle_is_rate() { [[ "$1" =~ $THROTTLE_RATE_RE ]]; }
 throttle_is_port() { [[ "$1" =~ $THROTTLE_PORT_RE ]]; }
@@ -61,46 +62,58 @@ throttle_is_net() { [[ "$1" =~ $THROTTLE_NET_RE ]]; }
 
 throttle_parse_rule() {
   # 1 - throttling rule
+  #
+  # The rate is always the last field.  The fields before it are, in order,
+  # an optional src net (the client being throttled), an optional dst net and
+  # an optional port/proto.  A leading empty field (|net|rate) leaves the src
+  # slot empty, so the net is a destination, exactly like in allowance rules.
   local rule="$1" f
-  local -a fields nets=()
+  local -a fields
   IFS='|' read -r -a fields <<< "$rule"
   T_DEV='' T_REMOTE='' T_PORT='' T_PROTO='' T_DOWN='' T_UP=''
-  for f in "${fields[@]}"; do
+  local n="${#fields[@]}"
+  if [ "$n" -lt 1 ]; then
+    bashio::log.error "[throttle] invalid rule '$rule': missing rate"
+    return 1
+  fi
+  local rate="${fields[$((n - 1))]}"
+  if ! throttle_is_rate "$rate"; then
+    bashio::log.error "[throttle] invalid rule '$rule': missing or invalid rate"
+    return 1
+  fi
+  T_DOWN="${rate%%,*}"
+  T_UP="${rate#*,}"
+  [ "$T_UP" = "$T_DOWN" ] && T_UP=''
+  local pre=$((n - 1))
+  if [ "$pre" -gt 3 ]; then
+    bashio::log.error "[throttle] invalid rule '$rule': too many fields"
+    return 1
+  fi
+  local i
+  for ((i = 0; i < pre; i++)); do
+    f="${fields[i]}"
     [ -n "$f" ] || continue
-    if throttle_is_rate "$f"; then
-      if [ -n "$T_DOWN" ]; then
-        bashio::log.error "[throttle] invalid rule '$rule': multiple rates"
-        return 1
-      fi
-      T_DOWN="${f%%,*}"
-      T_UP="${f#*,}"
-      [ "$T_UP" = "$T_DOWN" ] && T_UP=''
-    elif throttle_is_port "$f"; then
-      if [ -n "$T_PORT" ]; then
-        bashio::log.error "[throttle] invalid rule '$rule': multiple port fields"
+    if throttle_is_port "$f"; then
+      if [ "$i" -lt $((pre - 1)) ]; then
+        bashio::log.error "[throttle] invalid rule '$rule': port field must come last"
         return 1
       fi
       T_PORT="${f%/*}"
       T_PROTO="${f##*/}"
     elif throttle_is_net "$f"; then
-      if [ "${#nets[@]}" -ge 2 ]; then
-        bashio::log.error "[throttle] invalid rule '$rule': more than two networks"
-        return 1
-      fi
-      nets+=( "$f" )
+      case "$i" in
+        0) T_DEV="$f" ;;
+        1) T_REMOTE="$f" ;;
+        *)
+          bashio::log.error "[throttle] invalid rule '$rule': more than two networks"
+          return 1
+          ;;
+      esac
     else
       bashio::log.error "[throttle] invalid rule '$rule': unrecognized field '$f'"
       return 1
     fi
   done
-  case "${#nets[@]}" in
-    1) T_DEV="${nets[0]}" ;;
-    2) T_DEV="${nets[0]}"; T_REMOTE="${nets[1]}" ;;
-  esac
-  if [ -z "$T_DOWN" ]; then
-    bashio::log.error "[throttle] invalid rule '$rule': missing rate"
-    return 1
-  fi
   return 0
 }
 
@@ -145,10 +158,13 @@ throttle_expand_ports() {
 
 throttle_clear() {
   command -v tc > /dev/null 2>&1 || return 0
-  ip link del "$THROTTLE_IFB" 2> /dev/null || true
-  tc qdisc del dev wg0 root 2> /dev/null || true
+  # drop the qdiscs (and the filters inside them) before deleting the ifb
+  # device: a mirred filter holds a reference to its target device, so the
+  # device must outlive the filter that points at it
   tc qdisc del dev wg0 ingress 2> /dev/null || true
+  tc qdisc del dev wg0 root 2> /dev/null || true
   tc qdisc del dev "$THROTTLE_IFB" root 2> /dev/null || true
+  ip link del "$THROTTLE_IFB" 2> /dev/null || true
   return 0
 }
 
@@ -278,8 +294,13 @@ throttle_apply_up() {
     throttle_expand_ports "$T_PORT" _ports || return 1
   fi
   if [ "$THROTTLE_IFB_READY" != true ]; then
+    # once ifb creation has failed it will keep failing, so stop retrying
+    if [ "$THROTTLE_IFB_FAILED" = true ]; then
+      return 1
+    fi
     if ! throttle_setup_ifb; then
       bashio::log.warning "[throttle] could not create the ${THROTTLE_IFB} device (is the ifb kernel module available?); upload throttling skipped"
+      THROTTLE_IFB_FAILED=true
       return 1
     fi
     THROTTLE_IFB_READY=true
@@ -312,26 +333,42 @@ refresh_throttling() {
   THROTTLE_CID=10
   THROTTLE_DOWN_READY=false
   THROTTLE_IFB_READY=false
+  THROTTLE_IFB_FAILED=false
   local -a RULES=()
   read -r -a RULES <<< "$rules"
   for rule in "${RULES[@]}"; do
     [ -n "$rule" ] || continue
-    local failed=false
+    local down_ok=true up_ok=true
     if ! throttle_parse_rule "$rule"; then
       rejected=$((rejected + 1))
       continue
     fi
     if [ -n "$T_DOWN" ] && ! throttle_apply_down; then
-      failed=true
+      down_ok=false
     fi
     if [ -n "$T_UP" ] && ! throttle_apply_up; then
-      failed=true
+      up_ok=false
     fi
-    if [ "$failed" = true ]; then
+    local applied_dirs=0
+    if [ -n "$T_DOWN" ] && [ "$down_ok" = true ]; then
+      applied_dirs=$((applied_dirs + 1))
+    fi
+    if [ -n "$T_UP" ] && [ "$up_ok" = true ]; then
+      applied_dirs=$((applied_dirs + 1))
+    fi
+    if [ "$applied_dirs" -eq 0 ]; then
       rejected=$((rejected + 1))
     else
+      # a rule is applied as long as one of its caps took effect; the other
+      # direction is reported as skipped rather than the whole rule rejected
       applied=$((applied + 1))
       bashio::log.info "[throttle] applied: ${rule} (down: ${T_DOWN:-none}, up: ${T_UP:-none})"
+      if [ "$down_ok" = false ]; then
+        bashio::log.warning "[throttle] ${rule}: download cap not applied"
+      fi
+      if [ "$up_ok" = false ]; then
+        bashio::log.warning "[throttle] ${rule}: upload cap not applied"
+      fi
     fi
   done
   if [ "$applied" -eq 0 ]; then

@@ -1,6 +1,6 @@
 ---
 name: WireGuard UI
-version: 1.4.0
+version: 1.4.1
 url: https://github.com/samrocketman/addons-homeassistant/tree/main/wireguard-ui
 slug: wireguard-ui
 description: >-
@@ -51,7 +51,7 @@ schema:
   spoke_networks:
     - "match(^([0-9]{1,3}\\.){3}[0-9]{1,3}/[1-3]?[0-9]$)?"
   throttling_rules:
-    - "match(^(((default_route_ip|([0-9]{1,3}\\.){3}[0-9]{1,3}(\\/[1-3]?[0-9])?)\\|)?(((default_route_ip|([0-9]{1,3}\\.){3}[0-9]{1,3}(\\/[1-3]?[0-9])?)|)\\|)?(([0-9,:]+\\/(tcp|udp|icmp|any))\\|)?)?([1-9][0-9]*(kbit|mbit))(,([1-9][0-9]*(kbit|mbit)))?$)?"
+    - "match(^((((default_route_ip|([0-9]{1,3}\\.){3}[0-9]{1,3}(\\/[1-3]?[0-9])?)|)\\|)?(((default_route_ip|([0-9]{1,3}\\.){3}[0-9]{1,3}(\\/[1-3]?[0-9])?)|)\\|)?(([0-9,:]+\\/(tcp|udp|icmp|any))\\|)?)?([1-9][0-9]*(kbit|mbit))(,([1-9][0-9]*(kbit|mbit)))?$)?"
   default_client_dns: str?
   default_client_endpoint: str?
   log_level: list(trace|debug|info|notice|warning|error|fatal)?

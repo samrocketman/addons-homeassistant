@@ -47,7 +47,10 @@ EOF
 }
 default_ip_stub
 
-# runs refresh_throttling with the current TEST_RULES and logs the result
+ENGINE_OUT="$WORK/engine.out"
+
+# runs refresh_throttling with the current TEST_RULES and logs the result;
+# the engine's own log lines are kept in $ENGINE_OUT for assertions
 assert_engine() {
   export TEST_RULES
   env PATH="$BIN:$PATH" bash -c '
@@ -60,7 +63,7 @@ assert_engine() {
     default_route_ip=172.30.32.1
     source "$1"
     refresh_throttling || echo "ENGINE-RC=$?"
-  ' _ "$THROTTLE_SH" 2>&1 | sed 's/^/    /'
+  ' _ "$THROTTLE_SH" 2>&1 | tee "$ENGINE_OUT" | sed 's/^/    /'
 }
 
 # runs throttle_parse_rule and echoes the resulting globals
@@ -92,6 +95,15 @@ expect_no_log() {
     FAILURES=$((FAILURES + 1))
   else
     echo "  ok: $1"
+  fi
+}
+expect_engine() {
+  if grep -qF -- "$2" "$ENGINE_OUT"; then
+    echo "  ok: $1"
+  else
+    echo "  FAIL: $1"
+    echo "    missing: $2"
+    FAILURES=$((FAILURES + 1))
   fi
 }
 expect_parse() {
@@ -139,6 +151,12 @@ expect_parse "global" "10mbit,5mbit" \
   "DEV= REMOTE= PORT= PROTO= DOWN=10mbit UP=5mbit"
 expect_parse "icmp port ignored later" "10.252.2.1|0/icmp|50kbit" \
   "DEV=10.252.2.1 REMOTE= PORT=0 PROTO=icmp DOWN=50kbit UP="
+expect_parse "dst only (leading empty src)" "|192.168.1.50|10mbit" \
+  "DEV= REMOTE=192.168.1.50 PORT= PROTO= DOWN=10mbit UP="
+expect_parse "dst only with port" "|192.168.1.50|443/tcp|1mbit" \
+  "DEV= REMOTE=192.168.1.50 PORT=443 PROTO=tcp DOWN=1mbit UP="
+expect_parse "dst only up+down" "|default_route_ip|10mbit,5mbit" \
+  "DEV= REMOTE=default_route_ip PORT= PROTO= DOWN=10mbit UP=5mbit"
 
 echo
 echo "== parse: invalid rules are rejected"
@@ -146,6 +164,8 @@ reject_parse "missing rate" "10.252.2.1"
 reject_parse "missing rate (port)" "443/tcp"
 reject_parse "two rates" "10.252.2.1|10mbit|5mbit"
 reject_parse "three networks" "10.252.2.1|192.168.1.50|172.16.0.1|1mbit"
+reject_parse "port not last" "443/tcp|192.168.1.50|1mbit"
+reject_parse "three nets + port" "10.252.2.1|192.168.1.50|172.16.0.1|443/tcp|1mbit"
 reject_parse "bad field" "10.252.2.1|junk|10mbit"
 reject_parse "bad proto" "10.252.2.1|80/http|1mbit"
 reject_parse "empty rule" ""
@@ -160,6 +180,16 @@ expect_log "pass-through cl"  'tc class add dev wg0 parent 1: classid 1:2 htb ra
 expect_log "throttle class"   'tc class add dev wg0 parent 1: classid 1:11 htb rate 10mbit'
 expect_log "dst filter"       'tc filter add dev wg0 parent 1: protocol ip u32 match ip dst 10.252.2.0/24 flowid 1:11'
 expect_no_log "no ifb"        'ip link add dev ifb0'
+
+echo
+echo "== apply: dst-only rule shapes all clients toward the destination"
+TEST_RULES="|192.168.1.50|10mbit"
+: > "$LOG"
+assert_engine
+# down traffic flows server -> client, so the destination net is ip src on
+# the wg0 egress path
+expect_log "dst down filter" 'match ip src 192.168.1.50 flowid 1:11'
+expect_no_log "no dev match" 'ip dst 192.168.1.50'
 
 echo
 echo "== apply: dev+remote+port with down and up"
@@ -243,6 +273,8 @@ chmod +x "$BIN/ip"
 assert_engine
 expect_log "down applied"  'tc class add dev wg0 parent 1: classid 1:11 htb rate 10mbit'
 expect_no_log "no up"      'tc class add dev ifb0 parent 1: classid 1:12 htb rate 5mbit'
+expect_engine "counted applied" '1 rule(s) applied, 0 rejected.'
+expect_engine "up skip warning" 'upload cap not applied'
 default_ip_stub
 
 echo
@@ -254,6 +286,16 @@ expect_log "clear root"  'tc qdisc del dev wg0 root'
 expect_log "del ingress" 'tc qdisc del dev wg0 ingress'
 expect_log "del ifb"     'ip link del ifb0'
 expect_no_log "no class" 'tc class add'
+# the ingress qdisc (holding the mirred filter) must be dropped before the
+# ifb device is deleted, or the device deletion can block on the reference
+line_ingress="$(grep -nF 'tc qdisc del dev wg0 ingress' "$LOG" | cut -d: -f1)"
+line_ifb="$(grep -nF 'ip link del ifb0' "$LOG" | cut -d: -f1)"
+if [ -n "$line_ingress" ] && [ -n "$line_ifb" ] && [ "$line_ingress" -lt "$line_ifb" ]; then
+  echo "  ok: ingress qdisc removed before ifb device"
+else
+  echo "  FAIL: ingress qdisc removed before ifb device (ingress=$line_ingress ifb=$line_ifb)"
+  FAILURES=$((FAILURES + 1))
+fi
 
 echo
 echo "== apply: oversized port range is refused"
@@ -261,6 +303,7 @@ TEST_RULES="10.252.2.1|1:65535/udp|1mbit"
 : > "$LOG"
 assert_engine
 expect_no_log "refused" 'tc class add dev wg0'
+expect_engine "counted rejected" 'all 1 throttling rule(s) were rejected.'
 
 echo
 echo "========================================"

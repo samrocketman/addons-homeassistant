@@ -358,20 +358,24 @@ There's eight ways you can format a throttling rule.
 
 ```yaml
 - rate
-- dst_net|rate
-- port/proto|rate
-- dst_net|port/proto|rate
 - src_net|rate
+- port/proto|rate
+- src_net|port/proto|rate
 - src_net|dst_net|rate
-- src_net||port/proto|rate
 - src_net|dst_net|port/proto|rate
+- |dst_net|rate
+- |dst_net|port/proto|rate
 ```
 
 Definitions:
 
-- `src_net` - the WireGuard client (IP or CIDR) being throttled.  **Note:** If
-  `src_net` is not declared, the rule applies to **all** WireGuard clients.
+- `src_net` - the WireGuard client (IP or CIDR) being throttled.  It is always
+  the **first** network in the rule.  **Note:** If `src_net` is not declared,
+  the rule applies to **all** WireGuard clients.
 - `dst_net` - optional destination network (CIDR or IP) the cap applies to.
+  It is the **second** network in the rule.  If it is the only network,
+  leave the `src_net` slot empty (`|192.168.1.50|10mbit`) to cap **all**
+  WireGuard clients' traffic toward that destination.
   `default_route_ip` is supported just like in allowance rules.
 - `port` - the service port of the connection.  Multiport syntax such as
   `53,443,30000:32000` is supported.
@@ -403,6 +407,13 @@ most 1 Mbit/s:
 - 10.252.2.1|default_route_ip|1mbit
 ```
 
+Limit what **all** WireGuard clients can download from a specific server's TLS
+port at most 1 Mbit/s (empty `src_net` slot, destination-only rule):
+
+```yaml
+- |192.168.1.50|443/tcp|1mbit
+```
+
 Limit a client's TLS traffic to a specific server on both directions:
 
 ```yaml
@@ -414,6 +425,10 @@ Limit DNS for all WireGuard clients to 100 kbit/s download:
 ```yaml
 - 53/udp|100kbit
 ```
+
+> **Note:** Rules are evaluated in the order they are written and the first
+> match wins, so put specific rules before broad ones (e.g. before a rule
+> with no `src_net`).
 
 > **Note:** Rules take effect on save (the add-on restarts) or the next time
 > the WireGuard configuration changes.  Check the add-on log for `throttle`

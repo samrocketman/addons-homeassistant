@@ -1,3 +1,7 @@
+# 1.4.1
+
+- Enhanced bandwidth throttling.
+
 # 1.4.0
 
 - Bandwidth throttling: limit the download and/or upload bandwidth of WireGuard clients using firewall-style rules (`throttling_rules`), e.g. `10.252.2.0/24|10mbit,5mbit`.
